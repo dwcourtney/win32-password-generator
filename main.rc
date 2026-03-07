@@ -1,0 +1,4 @@
+#include "main.h"
+
+IDR_ICO_MAIN ICON "main.ico"
+8002 ICON "main.ico"
