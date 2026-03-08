@@ -7,6 +7,9 @@
 #include "util.h"
 #include "settings.h"
 #include "state.h"
+#include <string.h>
+#include <sal.h>
+#include <stdio.h>
 
 #pragma warning(disable : 4996)
 #pragma comment(lib, "comctl32.lib")
@@ -224,15 +227,22 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
         // Display the About dialog
         case IDM_HELP_ABOUT:
+        {
+            wchar_t buildDate[64];
+            wchar_t message[256];
 
-            MessageBoxW(
-                hwnd,
-                L"Author: David Courtney\n\nBuild Date: 07 March 2026\n",
-                L"About",
-                MB_OK
+            getBuildDate(buildDate, 64);
+
+            swprintf_s(
+                message,
+                256,
+                L"Author: David Courtney\n\nBuild Date: %ls\n",
+                buildDate
             );
 
-            break;
+            MessageBoxW(hwnd, message, L"About", MB_OK);
+        }
+        break;
 
         // Save current configuration to settings.json
         case IDM_FILE_SAVE:

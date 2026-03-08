@@ -1,6 +1,5 @@
 #include <windows.h>
 #include <commctrl.h>
-#include <stdint.h>
 
 #include "ui.h"
 #include "main.h"

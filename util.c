@@ -2,11 +2,10 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include "util.h"
+#include <string.h>
 
 #pragma warning(disable : 4996)
-
-#include "util.h"
-
 
 // Check if a file exists by attempting to open it for reading
 bool fileExists(const char* fileName) {
@@ -57,4 +56,39 @@ void centerWindow(HWND hwnd) {
         0,
         SWP_NOSIZE
     );
+}
+
+void getBuildDate(wchar_t* buffer, size_t size)
+{
+    const char* build = __DATE__;
+
+    char mon[4] = { 0 }; // ensure zero-termination to satisfy static analysis
+    int day;
+    int year;
+
+    // Use secure function and check return value to satisfy C6031.
+    int ret = sscanf_s(build, "%3s %d %d", mon, (unsigned)sizeof(mon), &day, &year);
+    if (ret != 3) {
+        // Ensure buffer is a valid empty string on failure.
+        if (size > 0) buffer[0] = L'\0';
+        return;
+    }
+
+    const wchar_t* month = L"";
+
+    // Use strncmp to compare only the first 3 characters (defensive against any non-NUL termination)
+    if (strncmp(mon, "Jan", 3) == 0) month = L"January";
+    else if (strncmp(mon, "Feb", 3) == 0) month = L"February";
+    else if (strncmp(mon, "Mar", 3) == 0) month = L"March";
+    else if (strncmp(mon, "Apr", 3) == 0) month = L"April";
+    else if (strncmp(mon, "May", 3) == 0) month = L"May";
+    else if (strncmp(mon, "Jun", 3) == 0) month = L"June";
+    else if (strncmp(mon, "Jul", 3) == 0) month = L"July";
+    else if (strncmp(mon, "Aug", 3) == 0) month = L"August";
+    else if (strncmp(mon, "Sep", 3) == 0) month = L"September";
+    else if (strncmp(mon, "Oct", 3) == 0) month = L"October";
+    else if (strncmp(mon, "Nov", 3) == 0) month = L"November";
+    else if (strncmp(mon, "Dec", 3) == 0) month = L"December";
+
+    swprintf(buffer, size, L"%02d %ls %d", day, month, year);
 }
