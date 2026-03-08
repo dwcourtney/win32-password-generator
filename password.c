@@ -1,9 +1,42 @@
+/*
+PSEUDOCODE / DETAILED PLAN:
+
+- Purpose:
+  Generate a cryptographically secure random password into the external
+  wchar_t buffer `passwordArray` honoring user-selected character classes and
+  avoiding ambiguous characters if requested.
+
+- Steps:
+  1. Validate `passwordLength` is within 1..MAX_PASS_LENGTH.
+  2. Ensure at least one character class flag is enabled.
+  3. Build an `allowed` character pool by iterating printable ASCII 33..126:
+     - Skip digits if `incNumbers == false`.
+     - Skip punctuation if `incSymbols == false`.
+     - Skip lowercase letters if `incLowerChars == false`.
+     - Skip uppercase letters if `incUpperChars == false`.
+     - If `avoidAmbChars == true`, exclude ambiguous characters: 0,1,I,O,i,l,o,|.
+     - Append allowed characters to `allowed` array and increment `allowedCount`.
+  4. If `allowedCount == 0` return failure (NULL/0).
+  5. Compute unbiased rejection sampling limit: limit = 256 - (256 % allowedCount).
+  6. For each password position:
+     - Repeatedly request one random byte until < limit.
+     - Map to index = randomByte % allowedCount.
+     - Store allowed[index] into `passwordArray[i]`.
+  7. Shuffle the generated characters via Fisher–Yates using the same unbiased
+     rejection sampling technique for each swap index.
+  8. Null-terminate `passwordArray` and return it.
+
+- Fix for lnt-uninitialized-local:
+  Initialize local variables that static analyzers may flag as possibly
+  uninitialized even if runtime initialization happens later:
+  - Initialize `randomByte`, `index`, and the `allowed` array to zero.
+  This does not change runtime logic but satisfies static analysis.
+*/
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <ctype.h>
-#include <string.h>
 #include <windows.h>
-#include <bcrypt.h>
 
 #include "password.h"
 
@@ -21,10 +54,13 @@ extern bool avoidAmbChars;
 
 wchar_t* generatePassword(void) {
 
-    uint8_t randomByte;
-    uint8_t index;
+    // Initialize locals to satisfy static analyzers (lnt-uninitialized-local).
+    // These initializations are harmless and keep runtime behavior unchanged.
+    uint8_t randomByte = 0;
+    uint8_t index = 0;
 
-    wchar_t allowed[94];
+    // Maximum printable ASCII 33..126 inclusive => 94 characters
+    wchar_t allowed[94] = {0};
     uint8_t allowedCount = 0;
 
     // Validate password length bounds
@@ -88,6 +124,7 @@ wchar_t* generatePassword(void) {
         for (uint8_t i = passwordLength - 1; i > 0; i--) {
 
             uint32_t shuffleLimit = 256 - (256 % (i + 1));
+            uint8_t j = 0;
 
             do {
                 if (BCryptGenRandom(NULL, &randomByte, 1, BCRYPT_USE_SYSTEM_PREFERRED_RNG) != 0) {
@@ -95,7 +132,7 @@ wchar_t* generatePassword(void) {
                 }
             } while (randomByte >= shuffleLimit);
 
-            uint8_t j = randomByte % (i + 1);
+            j = randomByte % (i + 1);
 
             wchar_t temp = passwordArray[i];
             passwordArray[i] = passwordArray[j];
