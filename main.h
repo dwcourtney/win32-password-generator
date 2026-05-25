@@ -23,6 +23,12 @@
 #define IDM_HELP_ABOUT      14
 #define ID_MAXSYMBOLSUPDOWN 15
 #define ID_MAXSYMBOLSEDIT   16
+#define ID_PASSWORDTEXTBOX2 17
+#define ID_PASSWORDTEXTBOX3 18
+#define ID_COPYBUTTON2      19
+#define ID_COPYBUTTON3      20
+#define ID_PASSWORDTEXTBOX4 21
+#define ID_COPYBUTTON4      22
 
 // Password limits
 #define MIN_PASS_LENGTH      8

@@ -19,6 +19,12 @@ extern int8_t maxSymbols;
 
 // Handle to password output textbox
 extern HWND hOut;
+extern HWND hOut2;
+extern HWND hOut3;
+extern HWND hOut4;
+extern HFONT hUiFont;
+extern HFONT hPasswordFont;
+extern HBRUSH hPasswordBkBrush;
 
 // User option flags
 extern bool incNumbers;

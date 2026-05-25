@@ -5,62 +5,161 @@
 #include "main.h"
 #include "state.h"
 
+#define SETTINGS_GROUP_X              10
+#define SETTINGS_GROUP_Y              5
+#define SETTINGS_GROUP_WIDTH          260
+#define SETTINGS_GROUP_HEIGHT         285
+#define SETTINGS_GROUP_TOP_PADDING    26
+#define SETTINGS_GROUP_BOTTOM_PADDING 22
+
+static void createFonts(void) {
+
+    if (hUiFont == NULL) {
+        hUiFont = CreateFontW(
+            -15, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+            DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+            CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI"
+        );
+    }
+
+    if (hPasswordFont == NULL) {
+        hPasswordFont = CreateFontW(
+            -16, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+            DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+            CLEARTYPE_QUALITY, FIXED_PITCH | FF_MODERN, L"Consolas"
+        );
+    }
+}
+
+static void setUiFont(HWND hwnd) {
+
+    if (hUiFont != NULL) {
+        SendMessageW(hwnd, WM_SETFONT, (WPARAM)hUiFont, TRUE);
+    }
+}
+
+static void setPasswordFont(HWND hwnd) {
+
+    if (hPasswordFont != NULL) {
+        SendMessageW(hwnd, WM_SETFONT, (WPARAM)hPasswordFont, TRUE);
+    }
+}
+
+static void centerPasswordText(HWND hwnd, UINT width, UINT height) {
+
+    HDC hdc;
+    HFONT hOldFont;
+    TEXTMETRICW textMetric;
+    RECT textRect;
+    int textY;
+
+    if (hPasswordFont == NULL) {
+        return;
+    }
+
+    hdc = GetDC(hwnd);
+
+    if (hdc == NULL) {
+        return;
+    }
+
+    hOldFont = (HFONT)SelectObject(hdc, hPasswordFont);
+    GetTextMetricsW(hdc, &textMetric);
+    SelectObject(hdc, hOldFont);
+    ReleaseDC(hwnd, hdc);
+
+    textY = ((int)height - textMetric.tmHeight) / 2;
+
+    if (textY < 0) {
+        textY = 0;
+    }
+
+    textRect.left = 3;
+    textRect.top = textY;
+    textRect.right = (LONG)width - 3;
+    textRect.bottom = (LONG)height;
+
+    SendMessageW(hwnd, EM_SETRECTNP, 0, (LPARAM)&textRect);
+}
+
+static void addCopyTooltip(HWND hwnd, HWND hToolTip, HWND hButton) {
+
+    TOOLINFOW toolInfo = { 0 };
+
+    toolInfo.cbSize = sizeof(TOOLINFOW);
+    toolInfo.uFlags = TTF_IDISHWND | TTF_SUBCLASS;
+    toolInfo.hwnd = hwnd;
+    toolInfo.uId = (UINT_PTR)hButton;
+    toolInfo.lpszText = L"Copy password";
+
+    SendMessageW(hToolTip, TTM_ADDTOOLW, 0, (LPARAM)&toolInfo);
+}
+
 // Create the checkbox controls for password configuration
 void createCheckBoxes(HWND hwnd) {
 
-    int checkBoxHeight = 30;
-    int checkBoxWidth = 220;
+    HWND hControl;
+    int checkBoxHeight = 32;
+    int checkBoxWidth = 230;
     int checkBoxXpos = 30;
-    int checkBoxYpos = 25;
-    int checkBoxYdiff = 25;
+    int checkBoxYpos = SETTINGS_GROUP_Y + SETTINGS_GROUP_TOP_PADDING;
+    int checkBoxYdiff = 29;
+
+    createFonts();
 
     // Settings group box
-    CreateWindowW(L"button", L"Settings",
+    hControl = CreateWindowW(L"button", L"Settings",
         WS_VISIBLE | WS_CHILD | BS_GROUPBOX,
-        10, 5, 250, 250,
+        SETTINGS_GROUP_X, SETTINGS_GROUP_Y, SETTINGS_GROUP_WIDTH, SETTINGS_GROUP_HEIGHT,
         hwnd, NULL, NULL, NULL);
+    setUiFont(hControl);
 
     // Include Numbers checkbox
-    CreateWindowW(L"button", L"Include Numbers",
+    hControl = CreateWindowW(L"button", L"Include Numbers",
         WS_VISIBLE | WS_CHILD | BS_CHECKBOX,
         checkBoxXpos, checkBoxYpos, checkBoxWidth, checkBoxHeight,
         hwnd, (HMENU)ID_INCNUMBERS, NULL, NULL);
+    setUiFont(hControl);
 
     CheckDlgButton(hwnd, ID_INCNUMBERS, incNumbers ? BST_CHECKED : BST_UNCHECKED);
 
     // Include Symbols checkbox
     checkBoxYpos += checkBoxYdiff;
-    CreateWindowW(L"button", L"Include Symbols",
+    hControl = CreateWindowW(L"button", L"Include Symbols",
         WS_VISIBLE | WS_CHILD | BS_CHECKBOX,
         checkBoxXpos, checkBoxYpos, checkBoxWidth, checkBoxHeight,
         hwnd, (HMENU)ID_INCSYMBOLS, NULL, NULL);
+    setUiFont(hControl);
 
     CheckDlgButton(hwnd, ID_INCSYMBOLS, incSymbols ? BST_CHECKED : BST_UNCHECKED);
 
     // Include Lowercase checkbox
     checkBoxYpos += checkBoxYdiff;
-    CreateWindowW(L"button", L"Include Lowercase Characters",
+    hControl = CreateWindowW(L"button", L"Include Lowercase Characters",
         WS_VISIBLE | WS_CHILD | BS_CHECKBOX,
         checkBoxXpos, checkBoxYpos, checkBoxWidth, checkBoxHeight,
         hwnd, (HMENU)ID_INCLOWERCHARS, NULL, NULL);
+    setUiFont(hControl);
 
     CheckDlgButton(hwnd, ID_INCLOWERCHARS, incLowerChars ? BST_CHECKED : BST_UNCHECKED);
 
     // Include Uppercase checkbox
     checkBoxYpos += checkBoxYdiff;
-    CreateWindowW(L"button", L"Include Uppercase Characters",
+    hControl = CreateWindowW(L"button", L"Include Uppercase Characters",
         WS_VISIBLE | WS_CHILD | BS_CHECKBOX,
         checkBoxXpos, checkBoxYpos, checkBoxWidth, checkBoxHeight,
         hwnd, (HMENU)ID_INCUPPERCHARS, NULL, NULL);
+    setUiFont(hControl);
 
     CheckDlgButton(hwnd, ID_INCUPPERCHARS, incUpperChars ? BST_CHECKED : BST_UNCHECKED);
 
     // Avoid ambiguous characters checkbox
     checkBoxYpos += checkBoxYdiff;
-    CreateWindowW(L"button", L"Avoid Ambiguous Characters",
+    hControl = CreateWindowW(L"button", L"Avoid Ambiguous Characters",
         WS_VISIBLE | WS_CHILD | BS_CHECKBOX,
         checkBoxXpos, checkBoxYpos, checkBoxWidth, checkBoxHeight,
         hwnd, (HMENU)ID_AVOIDAMBCHARS, NULL, NULL);
+    setUiFont(hControl);
 
     CheckDlgButton(hwnd, ID_AVOIDAMBCHARS, avoidAmbChars ? BST_CHECKED : BST_UNCHECKED);
 }
@@ -73,31 +172,118 @@ void createOtherControls(HWND hwnd) {
     HWND hEdit;
     HWND hMaxSymbolsUpDown;
     HWND hMaxSymbolsEdit;
-    UINT boxWidth = 330;
+    HWND hCopyButton;
+    HWND hToolTip;
+    HWND hControl;
+    UINT boxWidth = 352;
+    UINT passwordBoxWidth = 292;
+    UINT copyButtonWidth = 52;
+    UINT generateButtonHeight = 34;
+    UINT passwordBoxHeight = 30;
+    int contentTop = SETTINGS_GROUP_Y + SETTINGS_GROUP_TOP_PADDING;
+    int contentBottom = SETTINGS_GROUP_Y + SETTINGS_GROUP_HEIGHT - SETTINGS_GROUP_BOTTOM_PADDING;
+    int passwordGap = (
+        contentBottom -
+        contentTop -
+        generateButtonHeight -
+        (4 * passwordBoxHeight)
+    ) / 4;
+    int passwordY1 = contentTop + generateButtonHeight + passwordGap;
+    int passwordY2 = passwordY1 + passwordBoxHeight + passwordGap;
+    int passwordY3 = passwordY2 + passwordBoxHeight + passwordGap;
+    int passwordY4 = contentBottom - passwordBoxHeight;
+
+    createFonts();
 
     // Generate password button
-    CreateWindowW(L"Button", L"Generate",
+    hControl = CreateWindowW(L"Button", L"Generate Passwords",
         WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-        280, 25, boxWidth, 30,
+        290, contentTop, boxWidth, generateButtonHeight,
         hwnd, (HMENU)ID_GENERATEBUTTON, NULL, NULL);
+    setUiFont(hControl);
 
-    // Output textbox
+    // Password output textboxes
     hOut = CreateWindowW(L"Edit", L"",
-        WS_VISIBLE | WS_CHILD | WS_BORDER | ES_CENTER,
-        280, 120, boxWidth, 20,
+        WS_VISIBLE | WS_CHILD | WS_BORDER | ES_CENTER | ES_READONLY | ES_MULTILINE,
+        290, passwordY1, passwordBoxWidth, passwordBoxHeight,
         hwnd, (HMENU)ID_PASSWORDTEXTBOX, NULL, NULL);
+    setPasswordFont(hOut);
+    centerPasswordText(hOut, passwordBoxWidth, passwordBoxHeight);
 
-    // Copy button
-    CreateWindowW(L"Button", L"Copy to Clipboard",
+    hOut2 = CreateWindowW(L"Edit", L"",
+        WS_VISIBLE | WS_CHILD | WS_BORDER | ES_CENTER | ES_READONLY | ES_MULTILINE,
+        290, passwordY2, passwordBoxWidth, passwordBoxHeight,
+        hwnd, (HMENU)ID_PASSWORDTEXTBOX2, NULL, NULL);
+    setPasswordFont(hOut2);
+    centerPasswordText(hOut2, passwordBoxWidth, passwordBoxHeight);
+
+    hOut3 = CreateWindowW(L"Edit", L"",
+        WS_VISIBLE | WS_CHILD | WS_BORDER | ES_CENTER | ES_READONLY | ES_MULTILINE,
+        290, passwordY3, passwordBoxWidth, passwordBoxHeight,
+        hwnd, (HMENU)ID_PASSWORDTEXTBOX3, NULL, NULL);
+    setPasswordFont(hOut3);
+    centerPasswordText(hOut3, passwordBoxWidth, passwordBoxHeight);
+
+    hOut4 = CreateWindowW(L"Edit", L"",
+        WS_VISIBLE | WS_CHILD | WS_BORDER | ES_CENTER | ES_READONLY | ES_MULTILINE,
+        290, passwordY4, passwordBoxWidth, passwordBoxHeight,
+        hwnd, (HMENU)ID_PASSWORDTEXTBOX4, NULL, NULL);
+    setPasswordFont(hOut4);
+    centerPasswordText(hOut4, passwordBoxWidth, passwordBoxHeight);
+
+    // Copy buttons
+    hCopyButton = CreateWindowW(L"Button", L"Copy",
         WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-        280, 205, boxWidth, 30,
+        590, passwordY1, copyButtonWidth, passwordBoxHeight,
         hwnd, (HMENU)ID_COPYBUTTON, NULL, NULL);
+    setUiFont(hCopyButton);
+
+    hCopyButton = CreateWindowW(L"Button", L"Copy",
+        WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+        590, passwordY2, copyButtonWidth, passwordBoxHeight,
+        hwnd, (HMENU)ID_COPYBUTTON2, NULL, NULL);
+    setUiFont(hCopyButton);
+
+    hCopyButton = CreateWindowW(L"Button", L"Copy",
+        WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+        590, passwordY3, copyButtonWidth, passwordBoxHeight,
+        hwnd, (HMENU)ID_COPYBUTTON3, NULL, NULL);
+    setUiFont(hCopyButton);
+
+    hCopyButton = CreateWindowW(L"Button", L"Copy",
+        WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+        590, passwordY4, copyButtonWidth, passwordBoxHeight,
+        hwnd, (HMENU)ID_COPYBUTTON4, NULL, NULL);
+    setUiFont(hCopyButton);
 
     // Initialize common controls for up-down control
     INITCOMMONCONTROLSEX icex = { 0 };
     icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
-    icex.dwICC = ICC_UPDOWN_CLASS;
+    icex.dwICC = ICC_UPDOWN_CLASS | ICC_WIN95_CLASSES;
     InitCommonControlsEx(&icex);
+
+    // Tooltips for copy buttons
+    hToolTip = CreateWindowExW(
+        WS_EX_TOPMOST,
+        TOOLTIPS_CLASSW,
+        NULL,
+        WS_POPUP | TTS_ALWAYSTIP,
+        CW_USEDEFAULT,
+        CW_USEDEFAULT,
+        CW_USEDEFAULT,
+        CW_USEDEFAULT,
+        hwnd,
+        NULL,
+        NULL,
+        NULL
+    );
+
+    if (hToolTip != NULL) {
+        addCopyTooltip(hwnd, hToolTip, GetDlgItem(hwnd, ID_COPYBUTTON));
+        addCopyTooltip(hwnd, hToolTip, GetDlgItem(hwnd, ID_COPYBUTTON2));
+        addCopyTooltip(hwnd, hToolTip, GetDlgItem(hwnd, ID_COPYBUTTON3));
+        addCopyTooltip(hwnd, hToolTip, GetDlgItem(hwnd, ID_COPYBUTTON4));
+    }
 
     // Up-down control for password length
     hUpDown = CreateWindowW(UPDOWN_CLASSW, NULL,
@@ -108,14 +294,16 @@ void createOtherControls(HWND hwnd) {
     // Numeric edit box for password length
     hEdit = CreateWindowExW(WS_EX_CLIENTEDGE, WC_EDITW, NULL,
         WS_CHILD | WS_VISIBLE | ES_RIGHT,
-        30, 170, 45, 25,
+        30, 195, 50, 28,
         hwnd, (HMENU)ID_EDIT, NULL, NULL);
+    setUiFont(hEdit);
 
     // Label for password length control
-    CreateWindowW(L"static", L"Password Length",
+    hControl = CreateWindowW(L"static", L"Password Length",
         WS_VISIBLE | WS_CHILD | SS_LEFT,
-        90, 170, 160, 30,
+        95, 195, 160, 30,
         hwnd, NULL, NULL, NULL);
+    setUiFont(hControl);
 
     // Attach the up-down control to the edit box
     SendMessageW(hUpDown, UDM_SETBUDDY, (WPARAM)hEdit, 0);
@@ -131,14 +319,16 @@ void createOtherControls(HWND hwnd) {
     // Numeric edit box for maximum symbols
     hMaxSymbolsEdit = CreateWindowExW(WS_EX_CLIENTEDGE, WC_EDITW, NULL,
         WS_CHILD | WS_VISIBLE | ES_RIGHT,
-        30, 205, 45, 25,
+        30, 234, 50, 28,
         hwnd, (HMENU)ID_MAXSYMBOLSEDIT, NULL, NULL);
+    setUiFont(hMaxSymbolsEdit);
 
     // Label for maximum symbols control
-    CreateWindowW(L"static", L"Max Symbols",
+    hControl = CreateWindowW(L"static", L"Max Symbols",
         WS_VISIBLE | WS_CHILD | SS_LEFT,
-        90, 205, 160, 30,
+        95, 234, 160, 30,
         hwnd, NULL, NULL, NULL);
+    setUiFont(hControl);
 
     // Attach the up-down control to the edit box
     SendMessageW(hMaxSymbolsUpDown, UDM_SETBUDDY, (WPARAM)hMaxSymbolsEdit, 0);

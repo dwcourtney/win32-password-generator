@@ -19,6 +19,12 @@ int8_t maxSymbols;
 
 // Handle to the output textbox control
 HWND hOut;
+HWND hOut2;
+HWND hOut3;
+HWND hOut4;
+HFONT hUiFont;
+HFONT hPasswordFont;
+HBRUSH hPasswordBkBrush;
 
 // User option flags controlling allowed character classes
 bool incNumbers;
