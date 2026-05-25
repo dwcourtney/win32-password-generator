@@ -15,6 +15,7 @@ extern wchar_t passText[MAX_PASS_LENGTH + 1];
 // Password length state
 extern int8_t passwordLength;
 extern int8_t passTextLength;
+extern int8_t maxSymbols;
 
 // Handle to password output textbox
 extern HWND hOut;

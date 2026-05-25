@@ -7,6 +7,9 @@
 
 #pragma warning(disable : 4996)
 
+static HHOOK hMsgBoxHook;
+static HWND hMsgBoxOwner;
+
 // Check if a file exists by attempting to open it for reading
 bool fileExists(const char* fileName) {
 
@@ -56,6 +59,55 @@ void centerWindow(HWND hwnd) {
         0,
         SWP_NOSIZE
     );
+}
+
+// Center a message box relative to its owner window
+static LRESULT CALLBACK messageBoxHookProc(int code, WPARAM wParam, LPARAM lParam) {
+
+    if (code == HCBT_ACTIVATE) {
+
+        HWND hMsgBox = (HWND)wParam;
+        RECT ownerRect = { 0 };
+        RECT msgBoxRect = { 0 };
+
+        if (hMsgBoxOwner != NULL &&
+            GetWindowRect(hMsgBoxOwner, &ownerRect) &&
+            GetWindowRect(hMsgBox, &msgBoxRect)) {
+
+            int32_t ownerWidth = ownerRect.right - ownerRect.left;
+            int32_t ownerHeight = ownerRect.bottom - ownerRect.top;
+            int32_t msgBoxWidth = msgBoxRect.right - msgBoxRect.left;
+            int32_t msgBoxHeight = msgBoxRect.bottom - msgBoxRect.top;
+
+            SetWindowPos(
+                hMsgBox,
+                NULL,
+                ownerRect.left + (ownerWidth - msgBoxWidth) / 2,
+                ownerRect.top + (ownerHeight - msgBoxHeight) / 2,
+                0,
+                0,
+                SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE
+            );
+        }
+
+        UnhookWindowsHookEx(hMsgBoxHook);
+        hMsgBoxHook = NULL;
+    }
+
+    return CallNextHookEx(hMsgBoxHook, code, wParam, lParam);
+}
+
+int messageBoxCentered(HWND hwnd, LPCWSTR text, LPCWSTR caption, UINT type) {
+
+    hMsgBoxOwner = hwnd;
+    hMsgBoxHook = SetWindowsHookExW(
+        WH_CBT,
+        messageBoxHookProc,
+        NULL,
+        GetCurrentThreadId()
+    );
+
+    return MessageBoxW(hwnd, text, caption, type);
 }
 
 void getBuildDate(wchar_t* buffer, size_t size)

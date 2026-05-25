@@ -10,9 +10,15 @@ void createCheckBoxes(HWND hwnd) {
 
     int checkBoxHeight = 30;
     int checkBoxWidth = 220;
-    int checkBoxXpos = 20;
-    int checkBoxYpos = 20;
+    int checkBoxXpos = 30;
+    int checkBoxYpos = 25;
     int checkBoxYdiff = 25;
+
+    // Settings group box
+    CreateWindowW(L"button", L"Settings",
+        WS_VISIBLE | WS_CHILD | BS_GROUPBOX,
+        10, 5, 250, 250,
+        hwnd, NULL, NULL, NULL);
 
     // Include Numbers checkbox
     CreateWindowW(L"button", L"Include Numbers",
@@ -65,24 +71,26 @@ void createOtherControls(HWND hwnd) {
 
     HWND hUpDown;
     HWND hEdit;
+    HWND hMaxSymbolsUpDown;
+    HWND hMaxSymbolsEdit;
     UINT boxWidth = 330;
 
     // Generate password button
     CreateWindowW(L"Button", L"Generate",
         WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-        280, 20, boxWidth, 30,
+        280, 25, boxWidth, 30,
         hwnd, (HMENU)ID_GENERATEBUTTON, NULL, NULL);
 
     // Output textbox
     hOut = CreateWindowW(L"Edit", L"",
         WS_VISIBLE | WS_CHILD | WS_BORDER | ES_CENTER,
-        280, 80, boxWidth, 20,
+        280, 120, boxWidth, 20,
         hwnd, (HMENU)ID_PASSWORDTEXTBOX, NULL, NULL);
 
     // Copy button
     CreateWindowW(L"Button", L"Copy to Clipboard",
         WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-        280, 130, boxWidth, 30,
+        280, 205, boxWidth, 30,
         hwnd, (HMENU)ID_COPYBUTTON, NULL, NULL);
 
     // Initialize common controls for up-down control
@@ -100,19 +108,44 @@ void createOtherControls(HWND hwnd) {
     // Numeric edit box for password length
     hEdit = CreateWindowExW(WS_EX_CLIENTEDGE, WC_EDITW, NULL,
         WS_CHILD | WS_VISIBLE | ES_RIGHT,
-        20, 150, 45, 25,
+        30, 170, 45, 25,
         hwnd, (HMENU)ID_EDIT, NULL, NULL);
 
     // Label for password length control
     CreateWindowW(L"static", L"Password Length",
         WS_VISIBLE | WS_CHILD | SS_LEFT,
-        80, 150, 160, 30,
+        90, 170, 160, 30,
         hwnd, NULL, NULL, NULL);
 
     // Attach the up-down control to the edit box
     SendMessageW(hUpDown, UDM_SETBUDDY, (WPARAM)hEdit, 0);
     SendMessageW(hUpDown, UDM_SETRANGE, 0, MAKELPARAM(MAX_PASS_LENGTH, MIN_PASS_LENGTH));
     SendMessageW(hUpDown, UDM_SETPOS32, 0, passwordLength);
+
+    // Up-down control for maximum symbols
+    hMaxSymbolsUpDown = CreateWindowW(UPDOWN_CLASSW, NULL,
+        WS_CHILD | WS_VISIBLE | UDS_SETBUDDYINT | UDS_ALIGNRIGHT,
+        0, 0, 0, 0,
+        hwnd, (HMENU)ID_MAXSYMBOLSUPDOWN, NULL, NULL);
+
+    // Numeric edit box for maximum symbols
+    hMaxSymbolsEdit = CreateWindowExW(WS_EX_CLIENTEDGE, WC_EDITW, NULL,
+        WS_CHILD | WS_VISIBLE | ES_RIGHT,
+        30, 205, 45, 25,
+        hwnd, (HMENU)ID_MAXSYMBOLSEDIT, NULL, NULL);
+
+    // Label for maximum symbols control
+    CreateWindowW(L"static", L"Max Symbols",
+        WS_VISIBLE | WS_CHILD | SS_LEFT,
+        90, 205, 160, 30,
+        hwnd, NULL, NULL, NULL);
+
+    // Attach the up-down control to the edit box
+    SendMessageW(hMaxSymbolsUpDown, UDM_SETBUDDY, (WPARAM)hMaxSymbolsEdit, 0);
+    SendMessageW(hMaxSymbolsUpDown, UDM_SETRANGE, 0, MAKELPARAM(MAX_PASS_LENGTH, 0));
+    SendMessageW(hMaxSymbolsUpDown, UDM_SETPOS32, 0, maxSymbols);
+    EnableWindow(hMaxSymbolsEdit, incSymbols);
+    EnableWindow(hMaxSymbolsUpDown, incSymbols);
 }
 
 

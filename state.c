@@ -15,6 +15,7 @@ wchar_t passText[MAX_PASS_LENGTH + 1] = { 0 };
 // Password configuration state
 int8_t passwordLength;
 int8_t passTextLength;
+int8_t maxSymbols;
 
 // Handle to the output textbox control
 HWND hOut;

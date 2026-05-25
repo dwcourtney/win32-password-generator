@@ -21,8 +21,11 @@
 #define IDM_FILE_SAVE       12
 #define IDM_FILE_QUIT       13
 #define IDM_HELP_ABOUT      14
+#define ID_MAXSYMBOLSUPDOWN 15
+#define ID_MAXSYMBOLSEDIT   16
 
 // Password limits
 #define MIN_PASS_LENGTH      8
 #define MAX_PASS_LENGTH     32
 #define DEFAULT_PASS_LENGTH 16
+#define DEFAULT_MAX_SYMBOLS  3

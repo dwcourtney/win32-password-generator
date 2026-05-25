@@ -51,6 +51,7 @@ extern bool incSymbols;
 extern bool incLowerChars;
 extern bool incUpperChars;
 extern bool avoidAmbChars;
+extern int8_t maxSymbols;
 
 wchar_t* generatePassword(void) {
 
@@ -61,7 +62,10 @@ wchar_t* generatePassword(void) {
 
     // Maximum printable ASCII 33..126 inclusive => 94 characters
     wchar_t allowed[94] = {0};
+    wchar_t nonSymbolAllowed[94] = {0};
     uint8_t allowedCount = 0;
+    uint8_t nonSymbolAllowedCount = 0;
+    uint8_t symbolCount = 0;
 
     // Validate password length bounds
     if (passwordLength < 1 || passwordLength > MAX_PASS_LENGTH) {
@@ -95,6 +99,10 @@ wchar_t* generatePassword(void) {
 
         // Add character to allowed pool
         allowed[allowedCount++] = (wchar_t)c;
+
+        if (!ispunct(c)) {
+            nonSymbolAllowed[nonSymbolAllowedCount++] = (wchar_t)c;
+        }
     }
 
     // Abort if filtering removed all characters
@@ -102,11 +110,24 @@ wchar_t* generatePassword(void) {
         return 0;
     }
 
-    // Compute rejection limit once to avoid modulo bias
-    uint32_t limit = 256 - (256 % allowedCount);
+    uint32_t limit = 0;
 
     // Generate each password character using unbiased rejection sampling
     for (uint8_t i = 0; i < passwordLength; i++) {
+
+        wchar_t* selectedAllowed = allowed;
+        uint8_t selectedAllowedCount = allowedCount;
+
+        if (incSymbols && symbolCount >= maxSymbols) {
+            selectedAllowed = nonSymbolAllowed;
+            selectedAllowedCount = nonSymbolAllowedCount;
+        }
+
+        if (selectedAllowedCount == 0) {
+            return 0;
+        }
+
+        limit = 256 - (256 % selectedAllowedCount);
 
         do {
             if (BCryptGenRandom(NULL, &randomByte, 1, BCRYPT_USE_SYSTEM_PREFERRED_RNG) != 0) {
@@ -114,8 +135,12 @@ wchar_t* generatePassword(void) {
             }
         } while (randomByte >= limit);
 
-        index = randomByte % allowedCount;
-        passwordArray[i] = allowed[index];
+        index = randomByte % selectedAllowedCount;
+        passwordArray[i] = selectedAllowed[index];
+
+        if (incSymbols && ispunct((unsigned char)passwordArray[i])) {
+            symbolCount++;
+        }
     }
 
     // Shuffle characters using Fisher–Yates to randomize final ordering

@@ -1,1 +1,9 @@
-{"incNumbers":true,"incSymbols":true,"incLowerChars":true,"incUpperChars":true,"avoidAmbChars":true,"passwordLength":17}
+{
+	"incNumbers":	true,
+	"incSymbols":	true,
+	"incLowerChars":	true,
+	"incUpperChars":	true,
+	"avoidAmbChars":	true,
+	"passwordLength":	17,
+	"maxSymbols":	3
+}

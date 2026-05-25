@@ -51,7 +51,7 @@ int WINAPI wWinMain(
         0,
         0,
         640,
-        250,
+        325,
         NULL,
         NULL,
         hInstance,
@@ -130,6 +130,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             else {
                 CheckDlgButton(hwnd, ID_INCSYMBOLS, BST_CHECKED);
             }
+
+            incSymbols = IsDlgButtonChecked(hwnd, ID_INCSYMBOLS);
+            EnableWindow(GetDlgItem(hwnd, ID_MAXSYMBOLSEDIT), incSymbols);
+            EnableWindow(GetDlgItem(hwnd, ID_MAXSYMBOLSUPDOWN), incSymbols);
 
             break;
 
@@ -236,11 +240,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             swprintf_s(
                 message,
                 256,
-                L"Author: David Courtney\n\nBuild Date: %ls\n",
+                L"Author: David Courtney\nOriginally Created: August 2020\n\nBuild Date: %ls\n",
                 buildDate
             );
 
-            MessageBoxW(hwnd, message, L"About", MB_OK);
+            messageBoxCentered(hwnd, message, L"About", MB_OK);
         }
         break;
 
@@ -248,7 +252,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         case IDM_FILE_SAVE:
 
             saveSettings();
-            MessageBoxW(hwnd, L"Settings Saved", L"OK", MB_OK);
+            messageBoxCentered(hwnd, L"Settings Saved", L"OK", MB_OK);
 
             break;
 
@@ -272,14 +276,29 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
             lpnmud = (NMUPDOWN*)lParam;
 
-            passwordLength = lpnmud->iPos + lpnmud->iDelta;
+            if (GetDlgCtrlID(lpnmud->hdr.hwndFrom) == ID_UPDOWN) {
 
-            if (passwordLength < MIN_PASS_LENGTH) {
-                passwordLength = MIN_PASS_LENGTH;
+                passwordLength = lpnmud->iPos + lpnmud->iDelta;
+
+                if (passwordLength < MIN_PASS_LENGTH) {
+                    passwordLength = MIN_PASS_LENGTH;
+                }
+
+                if (passwordLength > MAX_PASS_LENGTH) {
+                    passwordLength = MAX_PASS_LENGTH;
+                }
             }
+            else if (GetDlgCtrlID(lpnmud->hdr.hwndFrom) == ID_MAXSYMBOLSUPDOWN) {
 
-            if (passwordLength > MAX_PASS_LENGTH) {
-                passwordLength = MAX_PASS_LENGTH;
+                maxSymbols = lpnmud->iPos + lpnmud->iDelta;
+
+                if (maxSymbols < 0) {
+                    maxSymbols = 0;
+                }
+
+                if (maxSymbols > MAX_PASS_LENGTH) {
+                    maxSymbols = MAX_PASS_LENGTH;
+                }
             }
         }
 

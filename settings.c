@@ -27,9 +27,10 @@ int8_t saveSettings(void) {
     cJSON_AddBoolToObject(json, "incUpperChars", incUpperChars);
     cJSON_AddBoolToObject(json, "avoidAmbChars", avoidAmbChars);
     cJSON_AddNumberToObject(json, "passwordLength", passwordLength);
+    cJSON_AddNumberToObject(json, "maxSymbols", maxSymbols);
 
-    // Convert the JSON object into a compact JSON string
-    char* jsonStr = cJSON_PrintUnformatted(json);
+    // Convert the JSON object into a formatted JSON string
+    char* jsonStr = cJSON_Print(json);
     if (jsonStr == NULL) {
         cJSON_Delete(json);
         return 1;
@@ -72,6 +73,7 @@ int8_t loadSettings(void) {
     incUpperChars = true;
     avoidAmbChars = false;
     passwordLength = DEFAULT_PASS_LENGTH;
+    maxSymbols = DEFAULT_MAX_SYMBOLS;
 
     // Attempt to load settings from file if it exists
     if (fileExists(jsonSettingsFile)) {
@@ -134,6 +136,17 @@ int8_t loadSettings(void) {
 
             if (passwordLength < MIN_PASS_LENGTH || passwordLength > MAX_PASS_LENGTH) {
                 passwordLength = DEFAULT_PASS_LENGTH;
+            }
+        }
+
+        data = cJSON_GetObjectItemCaseSensitive(json, "maxSymbols");
+
+        if (cJSON_IsNumber(data)) {
+
+            maxSymbols = data->valueint;
+
+            if (maxSymbols < 0 || maxSymbols > MAX_PASS_LENGTH) {
+                maxSymbols = DEFAULT_MAX_SYMBOLS;
             }
         }
 
