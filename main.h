@@ -21,6 +21,7 @@
 #define IDM_FILE_SAVE       12
 #define IDM_FILE_QUIT       13
 #define IDM_HELP_ABOUT      14
+#define IDM_HELP_INFO       24
 #define ID_MAXSYMBOLSUPDOWN 15
 #define ID_MAXSYMBOLSEDIT   16
 #define ID_PASSWORDTEXTBOX2 17

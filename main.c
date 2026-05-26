@@ -28,6 +28,11 @@ typedef struct BigInt {
 
 static wchar_t passwordSpaceStatusText[512];
 
+static bool canGeneratePassword(void);
+static void showImpossiblePasswordState(void);
+static void setPasswordControlsEnabled(bool enabled);
+static bool clampMaxSymbolsToPasswordLength(HWND hwnd);
+
 static bool generatePasswordChoice(HWND hPasswordTextBox) {
 
     passWord = generatePassword();
@@ -65,6 +70,31 @@ static bool generatePasswordChoices(void) {
     }
 
     return true;
+}
+
+static void generatePasswordChoicesOrSetImpossible(void) {
+
+    if (!canGeneratePassword()) {
+        showImpossiblePasswordState();
+        return;
+    }
+
+    passwordGenerationPossible = true;
+    setPasswordControlsEnabled(true);
+
+    SendMessageW(hPasswordBox1, WM_SETFONT, (WPARAM)hPasswordFont, TRUE);
+    SendMessageW(hPasswordBox2, WM_SETFONT, (WPARAM)hPasswordFont, TRUE);
+    SendMessageW(hPasswordBox3, WM_SETFONT, (WPARAM)hPasswordFont, TRUE);
+    SendMessageW(hPasswordBox4, WM_SETFONT, (WPARAM)hPasswordFont, TRUE);
+
+    InvalidateRect(hPasswordBox1, NULL, TRUE);
+    InvalidateRect(hPasswordBox2, NULL, TRUE);
+    InvalidateRect(hPasswordBox3, NULL, TRUE);
+    InvalidateRect(hPasswordBox4, NULL, TRUE);
+
+    if (!generatePasswordChoices()) {
+        showImpossiblePasswordState();
+    }
 }
 
 static int copyPasswordText(HWND hwnd, HWND hPasswordTextBox) {
@@ -117,6 +147,126 @@ static bool isPasswordTextBox(HWND hwnd) {
         hwnd == hPasswordBox2 ||
         hwnd == hPasswordBox3 ||
         hwnd == hPasswordBox4;
+}
+
+static bool getPasswordPoolCounts(uint32_t* symbolCount, uint32_t* nonSymbolCount) {
+
+    *symbolCount = 0;
+    *nonSymbolCount = 0;
+
+    for (uint8_t c = 33; c <= 126; c++) {
+
+        if (!incNumbers && isdigit(c)) continue;
+        if (!incSymbols && ispunct(c)) continue;
+        if (!incLowerChars && islower(c)) continue;
+        if (!incUpperChars && isupper(c)) continue;
+
+        if (avoidAmbChars &&
+            (c == '0' || c == '1' ||
+                c == 'I' || c == 'O' ||
+                c == 'i' || c == 'l' ||
+                c == 'o' || c == '|'))
+        {
+            continue;
+        }
+
+        if (ispunct(c)) {
+            (*symbolCount)++;
+        }
+        else {
+            (*nonSymbolCount)++;
+        }
+    }
+
+    return (*symbolCount + *nonSymbolCount) > 0;
+}
+
+static bool canGeneratePassword(void) {
+
+    uint32_t symbolCount = 0;
+    uint32_t nonSymbolCount = 0;
+
+    if (passwordLength < MIN_PASS_LENGTH || passwordLength > MAX_PASS_LENGTH) {
+        return false;
+    }
+
+    if (!(incNumbers || incSymbols || incLowerChars || incUpperChars)) {
+        return false;
+    }
+
+    if (!getPasswordPoolCounts(&symbolCount, &nonSymbolCount)) {
+        return false;
+    }
+
+    if (incSymbols && maxSymbols < passwordLength && nonSymbolCount == 0) {
+        return false;
+    }
+
+    return true;
+}
+
+static void setPasswordControlsEnabled(bool enabled) {
+
+    EnableWindow(hGenerateButton, enabled);
+    EnableWindow(hCopyButton1, enabled);
+    EnableWindow(hCopyButton2, enabled);
+    EnableWindow(hCopyButton3, enabled);
+    EnableWindow(hCopyButton4, enabled);
+}
+
+static bool clampMaxSymbolsToPasswordLength(HWND hwnd) {
+
+    bool changed = false;
+    HWND hMaxSymbolsUpDown = GetDlgItem(hwnd, ID_MAXSYMBOLSUPDOWN);
+
+    if (passwordLength < MIN_PASS_LENGTH) {
+        passwordLength = MIN_PASS_LENGTH;
+    }
+
+    if (passwordLength > MAX_PASS_LENGTH) {
+        passwordLength = MAX_PASS_LENGTH;
+    }
+
+    if (maxSymbols < 0) {
+        maxSymbols = 0;
+        changed = true;
+    }
+
+    if (maxSymbols > passwordLength) {
+        maxSymbols = passwordLength;
+        changed = true;
+    }
+
+    if (hMaxSymbolsUpDown != NULL) {
+        SendMessageW(hMaxSymbolsUpDown, UDM_SETRANGE, 0, MAKELPARAM(passwordLength, 0));
+        SendMessageW(hMaxSymbolsUpDown, UDM_SETPOS32, 0, maxSymbols);
+    }
+    else {
+        SetDlgItemInt(hwnd, ID_MAXSYMBOLSEDIT, maxSymbols, FALSE);
+    }
+
+    return changed;
+}
+
+static void showImpossiblePasswordState(void) {
+
+    passwordGenerationPossible = false;
+    setPasswordControlsEnabled(false);
+
+    SendMessageW(hPasswordBox1, WM_SETFONT, (WPARAM)hPasswordItalicFont, TRUE);
+    SendMessageW(hPasswordBox2, WM_SETFONT, (WPARAM)hPasswordItalicFont, TRUE);
+    SendMessageW(hPasswordBox3, WM_SETFONT, (WPARAM)hPasswordItalicFont, TRUE);
+    SendMessageW(hPasswordBox4, WM_SETFONT, (WPARAM)hPasswordItalicFont, TRUE);
+
+    SetWindowTextW(hPasswordBox1, L"No Possible Password");
+    SetWindowTextW(hPasswordBox2, L"No Possible Password");
+    SetWindowTextW(hPasswordBox3, L"No Possible Password");
+    SetWindowTextW(hPasswordBox4, L"No Possible Password");
+
+    InvalidateRect(hPasswordBox1, NULL, TRUE);
+    InvalidateRect(hPasswordBox2, NULL, TRUE);
+    InvalidateRect(hPasswordBox3, NULL, TRUE);
+    InvalidateRect(hPasswordBox4, NULL, TRUE);
 }
 
 static void bigIntSetZero(BigInt* value) {
@@ -336,30 +486,8 @@ static void updatePasswordSpaceStatus(HWND hwnd) {
     }
 
     syncSettingsFromControls(hwnd);
-
-    for (uint8_t c = 33; c <= 126; c++) {
-
-        if (!incNumbers && isdigit(c)) continue;
-        if (!incSymbols && ispunct(c)) continue;
-        if (!incLowerChars && islower(c)) continue;
-        if (!incUpperChars && isupper(c)) continue;
-
-        if (avoidAmbChars &&
-            (c == '0' || c == '1' ||
-                c == 'I' || c == 'O' ||
-                c == 'i' || c == 'l' ||
-                c == 'o' || c == '|'))
-        {
-            continue;
-        }
-
-        if (ispunct(c)) {
-            symbolCount++;
-        }
-        else {
-            nonSymbolCount++;
-        }
-    }
+    clampMaxSymbolsToPasswordLength(hwnd);
+    getPasswordPoolCounts(&symbolCount, &nonSymbolCount);
 
     poolCount = symbolCount + nonSymbolCount;
 
@@ -529,6 +657,131 @@ static void showAboutDialog(HWND hwnd) {
     SetActiveWindow(hwnd);
 }
 
+static void showInfoDialog(HWND hwnd) {
+
+    static bool infoClassRegistered = false;
+    RECT ownerRect = { 0 };
+    RECT infoRect = { 0 };
+    RECT clientRect = { 0 };
+    RECT editTextRect = { 0 };
+    HWND hInfo;
+    HWND hControl;
+    MSG msg;
+    int infoWidth = 620;
+    int infoHeight = 330;
+    int dialogPadding = 20;
+    int buttonWidth = 90;
+    int buttonHeight = 30;
+    int buttonGap = 18;
+    int buttonBottomPadding = 20;
+    int buttonY;
+    int editHeight;
+
+    const wchar_t* infoText =
+        L"This password generator uses cryptographically secure random values provided by the operating "
+        L"system via the Windows BCrypt API rather than traditional pseudo-random number generators such "
+        L"as rand() or srand(time(NULL)).\r\n\r\n"
+        L"It also avoids statistical bias when converting random values into characters. If a random range "
+        L"does not divide evenly into the size of the allowed character set, some characters can become more "
+        L"likely than others. This application uses rejection sampling to ensure a uniform distribution across "
+        L"all allowed characters.\r\n\r\n"
+        L"When password rules require specific character classes such as uppercase letters, lowercase letters, "
+        L"numbers, or symbols, the generator first ensures those requirements are satisfied and then shuffles "
+        L"the generated characters using the Fisher-Yates algorithm so the required characters are not placed "
+        L"in predictable positions.\r\n\r\n"
+        L"The purpose of the final shuffle step is not to make the password \"more random,\" but rather to "
+        L"remove positional structure introduced by password policy requirements while maintaining a statistically "
+        L"uniform distribution.";
+
+    if (!infoClassRegistered) {
+
+        WNDCLASSW wc = { 0 };
+
+        wc.lpszClassName = L"Password Generator Info";
+        wc.hInstance = GetModuleHandleW(NULL);
+        wc.hbrBackground = GetSysColorBrush(COLOR_3DFACE);
+        wc.lpfnWndProc = AboutWndProc;
+        wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+
+        RegisterClassW(&wc);
+        infoClassRegistered = true;
+    }
+
+    hInfo = CreateWindowExW(
+        WS_EX_DLGMODALFRAME,
+        L"Password Generator Info",
+        L"Password Generation Info",
+        WS_CAPTION | WS_SYSMENU | WS_POPUP,
+        0,
+        0,
+        infoWidth,
+        infoHeight,
+        hwnd,
+        NULL,
+        GetModuleHandleW(NULL),
+        NULL
+    );
+
+    if (hInfo == NULL) {
+        return;
+    }
+
+    GetClientRect(hInfo, &clientRect);
+    buttonY = clientRect.bottom - buttonBottomPadding - buttonHeight;
+    editHeight = buttonY - buttonGap - dialogPadding;
+
+    hControl = CreateWindowExW(WS_EX_CLIENTEDGE, L"edit", infoText,
+        WS_VISIBLE | WS_CHILD | WS_VSCROLL | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL,
+        dialogPadding, dialogPadding, clientRect.right - (dialogPadding * 2), editHeight,
+        hInfo, NULL, NULL, NULL);
+    SendMessageW(hControl, WM_SETFONT, (WPARAM)hUiFont, TRUE);
+    SendMessageW(hControl, EM_SETMARGINS, EC_LEFTMARGIN | EC_RIGHTMARGIN, MAKELPARAM(10, 10));
+    GetClientRect(hControl, &editTextRect);
+    editTextRect.left += 10;
+    editTextRect.right -= 14;
+    editTextRect.top += 6;
+    editTextRect.bottom -= 6;
+    SendMessageW(hControl, EM_SETRECT, 0, (LPARAM)&editTextRect);
+
+    hControl = CreateWindowW(L"button", L"OK",
+        WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+        (clientRect.right - buttonWidth) / 2, buttonY, buttonWidth, buttonHeight,
+        hInfo, (HMENU)IDOK, NULL, NULL);
+    SendMessageW(hControl, WM_SETFONT, (WPARAM)hUiFont, TRUE);
+
+    if (GetWindowRect(hwnd, &ownerRect) && GetWindowRect(hInfo, &infoRect)) {
+
+        int ownerWidth = ownerRect.right - ownerRect.left;
+        int ownerHeight = ownerRect.bottom - ownerRect.top;
+        int actualInfoWidth = infoRect.right - infoRect.left;
+        int actualInfoHeight = infoRect.bottom - infoRect.top;
+
+        SetWindowPos(
+            hInfo,
+            HWND_TOP,
+            ownerRect.left + (ownerWidth - actualInfoWidth) / 2,
+            ownerRect.top + (ownerHeight - actualInfoHeight) / 2,
+            0,
+            0,
+            SWP_NOSIZE
+        );
+    }
+
+    EnableWindow(hwnd, FALSE);
+    ShowWindow(hInfo, SW_SHOW);
+
+    while (IsWindow(hInfo) && GetMessageW(&msg, NULL, 0, 0)) {
+
+        if (!IsDialogMessageW(hInfo, &msg)) {
+            TranslateMessage(&msg);
+            DispatchMessageW(&msg);
+        }
+    }
+
+    EnableWindow(hwnd, TRUE);
+    SetActiveWindow(hwnd);
+}
+
 static void showSettingsSavedDialog(HWND hwnd) {
 
     static bool settingsSavedClassRegistered = false;
@@ -574,95 +827,6 @@ static void showSettingsSavedDialog(HWND hwnd) {
     }
 
     hControl = CreateWindowW(L"static", L"Settings Saved",
-        WS_VISIBLE | WS_CHILD | SS_CENTER,
-        20, 42, dialogWidth - 40, 28,
-        hDialog, NULL, NULL, NULL);
-    SendMessageW(hControl, WM_SETFONT, (WPARAM)hUiFont, TRUE);
-
-    hControl = CreateWindowW(L"button", L"OK",
-        WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-        (dialogWidth - 90) / 2, 105, 90, 30,
-        hDialog, (HMENU)IDOK, NULL, NULL);
-    SendMessageW(hControl, WM_SETFONT, (WPARAM)hUiFont, TRUE);
-
-    if (GetWindowRect(hwnd, &ownerRect) && GetWindowRect(hDialog, &dialogRect)) {
-
-        int ownerWidth = ownerRect.right - ownerRect.left;
-        int ownerHeight = ownerRect.bottom - ownerRect.top;
-        int actualDialogWidth = dialogRect.right - dialogRect.left;
-        int actualDialogHeight = dialogRect.bottom - dialogRect.top;
-
-        SetWindowPos(
-            hDialog,
-            HWND_TOP,
-            ownerRect.left + (ownerWidth - actualDialogWidth) / 2,
-            ownerRect.top + (ownerHeight - actualDialogHeight) / 2,
-            0,
-            0,
-            SWP_NOSIZE
-        );
-    }
-
-    EnableWindow(hwnd, FALSE);
-    ShowWindow(hDialog, SW_SHOW);
-
-    while (IsWindow(hDialog) && GetMessageW(&msg, NULL, 0, 0)) {
-
-        if (!IsDialogMessageW(hDialog, &msg)) {
-            TranslateMessage(&msg);
-            DispatchMessageW(&msg);
-        }
-    }
-
-    EnableWindow(hwnd, TRUE);
-    SetActiveWindow(hwnd);
-}
-
-static void showErrorDialog(HWND hwnd) {
-
-    static bool errorClassRegistered = false;
-    RECT ownerRect = { 0 };
-    RECT dialogRect = { 0 };
-    HWND hDialog;
-    HWND hControl;
-    MSG msg;
-    int dialogWidth = 260;
-    int dialogHeight = 190;
-
-    if (!errorClassRegistered) {
-
-        WNDCLASSW wc = { 0 };
-
-        wc.lpszClassName = L"Password Generator Error";
-        wc.hInstance = GetModuleHandleW(NULL);
-        wc.hbrBackground = GetSysColorBrush(COLOR_3DFACE);
-        wc.lpfnWndProc = AboutWndProc;
-        wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-
-        RegisterClassW(&wc);
-        errorClassRegistered = true;
-    }
-
-    hDialog = CreateWindowExW(
-        WS_EX_DLGMODALFRAME,
-        L"Password Generator Error",
-        L"Error",
-        WS_CAPTION | WS_SYSMENU | WS_POPUP,
-        0,
-        0,
-        dialogWidth,
-        dialogHeight,
-        hwnd,
-        NULL,
-        GetModuleHandleW(NULL),
-        NULL
-    );
-
-    if (hDialog == NULL) {
-        return;
-    }
-
-    hControl = CreateWindowW(L"static", L"Not possible!",
         WS_VISIBLE | WS_CHILD | SS_CENTER,
         20, 42, dialogWidth - 40, 28,
         hDialog, NULL, NULL, NULL);
@@ -774,16 +938,20 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         centerWindow(hwnd);
 
         hPasswordBkBrush = CreateSolidBrush(RGB(255, 255, 255));
+        hPasswordImpossibleBkBrush = CreateSolidBrush(RGB(255, 244, 204));
+        clampMaxSymbolsToPasswordLength(hwnd);
         updatePasswordSpaceStatus(hwnd);
 
         // Generate the initial passwords displayed in the UI
-        generatePasswordChoices();
+        generatePasswordChoicesOrSetImpossible();
 
         break;
 
 
     // Handle button presses, checkbox toggles, and menu selections
     case WM_COMMAND:
+    {
+        bool shouldGeneratePasswords = false;
 
         // Read current checkbox states
         incNumbers = IsDlgButtonChecked(hwnd, ID_INCNUMBERS);
@@ -804,6 +972,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 CheckDlgButton(hwnd, ID_INCNUMBERS, BST_CHECKED);
             }
 
+            shouldGeneratePasswords = true;
             break;
 
         // Toggle "Include Symbols"
@@ -820,6 +989,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             EnableWindow(GetDlgItem(hwnd, ID_MAXSYMBOLSEDIT), incSymbols);
             EnableWindow(GetDlgItem(hwnd, ID_MAXSYMBOLSUPDOWN), incSymbols);
 
+            shouldGeneratePasswords = true;
             break;
 
         // Toggle "Include Lowercase Characters"
@@ -832,6 +1002,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 CheckDlgButton(hwnd, ID_INCLOWERCHARS, BST_CHECKED);
             }
 
+            shouldGeneratePasswords = true;
             break;
 
         // Toggle "Include Uppercase Characters"
@@ -844,6 +1015,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 CheckDlgButton(hwnd, ID_INCUPPERCHARS, BST_CHECKED);
             }
 
+            shouldGeneratePasswords = true;
             break;
 
         // Toggle "Avoid Ambiguous Characters"
@@ -856,14 +1028,22 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 CheckDlgButton(hwnd, ID_AVOIDAMBCHARS, BST_CHECKED);
             }
 
+            shouldGeneratePasswords = true;
+            break;
+
+        case ID_EDIT:
+        case ID_MAXSYMBOLSEDIT:
+
+            if (HIWORD(wParam) == EN_CHANGE) {
+                shouldGeneratePasswords = true;
+            }
+
             break;
 
         // Generate a new password
         case ID_GENERATEBUTTON:
 
-            if (!generatePasswordChoices()) {
-                showErrorDialog(hwnd);
-            }
+            generatePasswordChoicesOrSetImpossible();
 
             break;
 
@@ -889,6 +1069,13 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
             break;
 
+        // Display password generation information
+        case IDM_HELP_INFO:
+
+            showInfoDialog(hwnd);
+
+            break;
+
         // Display the About dialog
         case IDM_HELP_ABOUT:
 
@@ -911,8 +1098,15 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             return 0;
         }
 
+        clampMaxSymbolsToPasswordLength(hwnd);
         updatePasswordSpaceStatus(hwnd);
+
+        if (shouldGeneratePasswords) {
+            generatePasswordChoicesOrSetImpossible();
+        }
+
         break;
+    }
 
 
     // Handle password length changes from the up/down control
@@ -922,34 +1116,53 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
         if (code == UDN_DELTAPOS) {
 
+            bool settingChanged = false;
+
             lpnmud = (NMUPDOWN*)lParam;
 
             if (GetDlgCtrlID(lpnmud->hdr.hwndFrom) == ID_UPDOWN) {
 
-                passwordLength = lpnmud->iPos + lpnmud->iDelta;
+                int8_t newPasswordLength = lpnmud->iPos + lpnmud->iDelta;
 
-                if (passwordLength < MIN_PASS_LENGTH) {
-                    passwordLength = MIN_PASS_LENGTH;
+                if (newPasswordLength < MIN_PASS_LENGTH) {
+                    newPasswordLength = MIN_PASS_LENGTH;
                 }
 
-                if (passwordLength > MAX_PASS_LENGTH) {
-                    passwordLength = MAX_PASS_LENGTH;
+                if (newPasswordLength > MAX_PASS_LENGTH) {
+                    newPasswordLength = MAX_PASS_LENGTH;
+                }
+
+                if (newPasswordLength != passwordLength) {
+                    passwordLength = newPasswordLength;
+                    settingChanged = true;
                 }
             }
             else if (GetDlgCtrlID(lpnmud->hdr.hwndFrom) == ID_MAXSYMBOLSUPDOWN) {
 
-                maxSymbols = lpnmud->iPos + lpnmud->iDelta;
+                int8_t newMaxSymbols = lpnmud->iPos + lpnmud->iDelta;
 
-                if (maxSymbols < 0) {
-                    maxSymbols = 0;
+                if (newMaxSymbols < 0) {
+                    newMaxSymbols = 0;
                 }
 
-                if (maxSymbols > MAX_PASS_LENGTH) {
-                    maxSymbols = MAX_PASS_LENGTH;
+                if (newMaxSymbols > passwordLength) {
+                    newMaxSymbols = passwordLength;
+                }
+
+                if (newMaxSymbols != maxSymbols) {
+                    maxSymbols = newMaxSymbols;
+                    settingChanged = true;
                 }
             }
 
-            updatePasswordSpaceStatus(hwnd);
+            if (clampMaxSymbolsToPasswordLength(hwnd)) {
+                settingChanged = true;
+            }
+
+            if (settingChanged) {
+                updatePasswordSpaceStatus(hwnd);
+                generatePasswordChoicesOrSetImpossible();
+            }
         }
 
         break;
@@ -1002,10 +1215,18 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     // Keep read-only password textboxes visually white
     case WM_CTLCOLORSTATIC:
 
-        if (isPasswordTextBox((HWND)lParam) && hPasswordBkBrush != NULL) {
+        if (isPasswordTextBox((HWND)lParam)) {
             SetTextColor((HDC)wParam, GetSysColor(COLOR_WINDOWTEXT));
-            SetBkColor((HDC)wParam, RGB(255, 255, 255));
-            return (LRESULT)hPasswordBkBrush;
+
+            if (passwordGenerationPossible && hPasswordBkBrush != NULL) {
+                SetBkColor((HDC)wParam, RGB(255, 255, 255));
+                return (LRESULT)hPasswordBkBrush;
+            }
+
+            if (!passwordGenerationPossible && hPasswordImpossibleBkBrush != NULL) {
+                SetBkColor((HDC)wParam, RGB(255, 244, 204));
+                return (LRESULT)hPasswordImpossibleBkBrush;
+            }
         }
 
         break;
@@ -1024,9 +1245,19 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             hPasswordFont = NULL;
         }
 
+        if (hPasswordItalicFont != NULL) {
+            DeleteObject(hPasswordItalicFont);
+            hPasswordItalicFont = NULL;
+        }
+
         if (hPasswordBkBrush != NULL) {
             DeleteObject(hPasswordBkBrush);
             hPasswordBkBrush = NULL;
+        }
+
+        if (hPasswordImpossibleBkBrush != NULL) {
+            DeleteObject(hPasswordImpossibleBkBrush);
+            hPasswordImpossibleBkBrush = NULL;
         }
 
         PostQuitMessage(0);

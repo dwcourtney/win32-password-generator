@@ -22,10 +22,18 @@ HWND hPasswordBox1;
 HWND hPasswordBox2;
 HWND hPasswordBox3;
 HWND hPasswordBox4;
+HWND hGenerateButton;
+HWND hCopyButton1;
+HWND hCopyButton2;
+HWND hCopyButton3;
+HWND hCopyButton4;
 HWND hStatus;
 HFONT hUiFont;
 HFONT hPasswordFont;
+HFONT hPasswordItalicFont;
 HBRUSH hPasswordBkBrush;
+HBRUSH hPasswordImpossibleBkBrush;
+bool passwordGenerationPossible = true;
 
 // User option flags controlling allowed character classes
 bool incNumbers;

@@ -29,6 +29,14 @@ static void createFonts(void) {
             CLEARTYPE_QUALITY, FIXED_PITCH | FF_MODERN, L"Consolas"
         );
     }
+
+    if (hPasswordItalicFont == NULL) {
+        hPasswordItalicFont = CreateFontW(
+            -16, 0, 0, 0, FW_NORMAL, TRUE, FALSE, FALSE,
+            DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+            CLEARTYPE_QUALITY, FIXED_PITCH | FF_MODERN, L"Consolas"
+        );
+    }
 }
 
 static void setUiFont(HWND hwnd) {
@@ -172,7 +180,6 @@ void createOtherControls(HWND hwnd) {
     HWND hEdit;
     HWND hMaxSymbolsUpDown;
     HWND hMaxSymbolsEdit;
-    HWND hCopyButton;
     HWND hToolTip;
     HWND hControl;
     UINT boxWidth = 472;
@@ -196,11 +203,11 @@ void createOtherControls(HWND hwnd) {
     createFonts();
 
     // Generate password button
-    hControl = CreateWindowW(L"Button", L"Generate Passwords",
+    hGenerateButton = CreateWindowW(L"Button", L"Generate Passwords",
         WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
         290, contentTop, boxWidth, generateButtonHeight,
         hwnd, (HMENU)ID_GENERATEBUTTON, NULL, NULL);
-    setUiFont(hControl);
+    setUiFont(hGenerateButton);
 
     // Password output textboxes
     hPasswordBox1 = CreateWindowW(L"Edit", L"",
@@ -232,29 +239,29 @@ void createOtherControls(HWND hwnd) {
     centerPasswordText(hPasswordBox4, passwordBoxWidth, passwordBoxHeight);
 
     // Copy buttons
-    hCopyButton = CreateWindowW(L"Button", L"Copy",
+    hCopyButton1 = CreateWindowW(L"Button", L"Copy",
         WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
         710, passwordY1, copyButtonWidth, passwordBoxHeight,
         hwnd, (HMENU)ID_COPYBUTTON, NULL, NULL);
-    setUiFont(hCopyButton);
+    setUiFont(hCopyButton1);
 
-    hCopyButton = CreateWindowW(L"Button", L"Copy",
+    hCopyButton2 = CreateWindowW(L"Button", L"Copy",
         WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
         710, passwordY2, copyButtonWidth, passwordBoxHeight,
         hwnd, (HMENU)ID_COPYBUTTON2, NULL, NULL);
-    setUiFont(hCopyButton);
+    setUiFont(hCopyButton2);
 
-    hCopyButton = CreateWindowW(L"Button", L"Copy",
+    hCopyButton3 = CreateWindowW(L"Button", L"Copy",
         WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
         710, passwordY3, copyButtonWidth, passwordBoxHeight,
         hwnd, (HMENU)ID_COPYBUTTON3, NULL, NULL);
-    setUiFont(hCopyButton);
+    setUiFont(hCopyButton3);
 
-    hCopyButton = CreateWindowW(L"Button", L"Copy",
+    hCopyButton4 = CreateWindowW(L"Button", L"Copy",
         WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
         710, passwordY4, copyButtonWidth, passwordBoxHeight,
         hwnd, (HMENU)ID_COPYBUTTON4, NULL, NULL);
-    setUiFont(hCopyButton);
+    setUiFont(hCopyButton4);
 
     // Initialize common controls for up-down control
     INITCOMMONCONTROLSEX icex = { 0 };
@@ -340,7 +347,7 @@ void createOtherControls(HWND hwnd) {
 
     // Attach the up-down control to the edit box
     SendMessageW(hMaxSymbolsUpDown, UDM_SETBUDDY, (WPARAM)hMaxSymbolsEdit, 0);
-    SendMessageW(hMaxSymbolsUpDown, UDM_SETRANGE, 0, MAKELPARAM(MAX_PASS_LENGTH, 0));
+    SendMessageW(hMaxSymbolsUpDown, UDM_SETRANGE, 0, MAKELPARAM(passwordLength, 0));
     SendMessageW(hMaxSymbolsUpDown, UDM_SETPOS32, 0, maxSymbols);
     EnableWindow(hMaxSymbolsEdit, incSymbols);
     EnableWindow(hMaxSymbolsUpDown, incSymbols);
@@ -365,6 +372,7 @@ void createMenuItems(HWND hwnd) {
     AppendMenuW(hMenubar, MF_POPUP, (UINT_PTR)fileMenu, L"&File");
 
     // Help menu
+    AppendMenuW(helpMenu, MF_STRING, IDM_HELP_INFO, L"&Info");
     AppendMenuW(helpMenu, MF_STRING, IDM_HELP_ABOUT, L"&About");
 
     AppendMenuW(hMenubar, MF_POPUP, (UINT_PTR)helpMenu, L"&Help");

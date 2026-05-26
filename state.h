@@ -22,10 +22,18 @@ extern HWND hPasswordBox1;
 extern HWND hPasswordBox2;
 extern HWND hPasswordBox3;
 extern HWND hPasswordBox4;
+extern HWND hGenerateButton;
+extern HWND hCopyButton1;
+extern HWND hCopyButton2;
+extern HWND hCopyButton3;
+extern HWND hCopyButton4;
 extern HWND hStatus;
 extern HFONT hUiFont;
 extern HFONT hPasswordFont;
+extern HFONT hPasswordItalicFont;
 extern HBRUSH hPasswordBkBrush;
+extern HBRUSH hPasswordImpossibleBkBrush;
+extern bool passwordGenerationPossible;
 
 // User option flags
 extern bool incNumbers;

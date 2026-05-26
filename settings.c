@@ -145,8 +145,12 @@ int8_t loadSettings(void) {
 
             maxSymbols = data->valueint;
 
-            if (maxSymbols < 0 || maxSymbols > MAX_PASS_LENGTH) {
+            if (maxSymbols < 0 || maxSymbols > passwordLength) {
                 maxSymbols = DEFAULT_MAX_SYMBOLS;
+
+                if (maxSymbols > passwordLength) {
+                    maxSymbols = passwordLength;
+                }
             }
         }
 
