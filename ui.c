@@ -175,8 +175,8 @@ void createOtherControls(HWND hwnd) {
     HWND hCopyButton;
     HWND hToolTip;
     HWND hControl;
-    UINT boxWidth = 352;
-    UINT passwordBoxWidth = 292;
+    UINT boxWidth = 472;
+    UINT passwordBoxWidth = 412;
     UINT copyButtonWidth = 52;
     UINT generateButtonHeight = 34;
     UINT passwordBoxHeight = 30;
@@ -234,25 +234,25 @@ void createOtherControls(HWND hwnd) {
     // Copy buttons
     hCopyButton = CreateWindowW(L"Button", L"Copy",
         WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-        590, passwordY1, copyButtonWidth, passwordBoxHeight,
+        710, passwordY1, copyButtonWidth, passwordBoxHeight,
         hwnd, (HMENU)ID_COPYBUTTON, NULL, NULL);
     setUiFont(hCopyButton);
 
     hCopyButton = CreateWindowW(L"Button", L"Copy",
         WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-        590, passwordY2, copyButtonWidth, passwordBoxHeight,
+        710, passwordY2, copyButtonWidth, passwordBoxHeight,
         hwnd, (HMENU)ID_COPYBUTTON2, NULL, NULL);
     setUiFont(hCopyButton);
 
     hCopyButton = CreateWindowW(L"Button", L"Copy",
         WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-        590, passwordY3, copyButtonWidth, passwordBoxHeight,
+        710, passwordY3, copyButtonWidth, passwordBoxHeight,
         hwnd, (HMENU)ID_COPYBUTTON3, NULL, NULL);
     setUiFont(hCopyButton);
 
     hCopyButton = CreateWindowW(L"Button", L"Copy",
         WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-        590, passwordY4, copyButtonWidth, passwordBoxHeight,
+        710, passwordY4, copyButtonWidth, passwordBoxHeight,
         hwnd, (HMENU)ID_COPYBUTTON4, NULL, NULL);
     setUiFont(hCopyButton);
 

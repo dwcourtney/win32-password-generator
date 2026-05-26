@@ -330,6 +330,95 @@ static void showSettingsSavedDialog(HWND hwnd) {
     SetActiveWindow(hwnd);
 }
 
+static void showErrorDialog(HWND hwnd) {
+
+    static bool errorClassRegistered = false;
+    RECT ownerRect = { 0 };
+    RECT dialogRect = { 0 };
+    HWND hDialog;
+    HWND hControl;
+    MSG msg;
+    int dialogWidth = 260;
+    int dialogHeight = 190;
+
+    if (!errorClassRegistered) {
+
+        WNDCLASSW wc = { 0 };
+
+        wc.lpszClassName = L"Password Generator Error";
+        wc.hInstance = GetModuleHandleW(NULL);
+        wc.hbrBackground = GetSysColorBrush(COLOR_3DFACE);
+        wc.lpfnWndProc = AboutWndProc;
+        wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+
+        RegisterClassW(&wc);
+        errorClassRegistered = true;
+    }
+
+    hDialog = CreateWindowExW(
+        WS_EX_DLGMODALFRAME,
+        L"Password Generator Error",
+        L"Error",
+        WS_CAPTION | WS_SYSMENU | WS_POPUP,
+        0,
+        0,
+        dialogWidth,
+        dialogHeight,
+        hwnd,
+        NULL,
+        GetModuleHandleW(NULL),
+        NULL
+    );
+
+    if (hDialog == NULL) {
+        return;
+    }
+
+    hControl = CreateWindowW(L"static", L"Not possible!",
+        WS_VISIBLE | WS_CHILD | SS_CENTER,
+        20, 42, dialogWidth - 40, 28,
+        hDialog, NULL, NULL, NULL);
+    SendMessageW(hControl, WM_SETFONT, (WPARAM)hUiFont, TRUE);
+
+    hControl = CreateWindowW(L"button", L"OK",
+        WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+        (dialogWidth - 90) / 2, 105, 90, 30,
+        hDialog, (HMENU)IDOK, NULL, NULL);
+    SendMessageW(hControl, WM_SETFONT, (WPARAM)hUiFont, TRUE);
+
+    if (GetWindowRect(hwnd, &ownerRect) && GetWindowRect(hDialog, &dialogRect)) {
+
+        int ownerWidth = ownerRect.right - ownerRect.left;
+        int ownerHeight = ownerRect.bottom - ownerRect.top;
+        int actualDialogWidth = dialogRect.right - dialogRect.left;
+        int actualDialogHeight = dialogRect.bottom - dialogRect.top;
+
+        SetWindowPos(
+            hDialog,
+            HWND_TOP,
+            ownerRect.left + (ownerWidth - actualDialogWidth) / 2,
+            ownerRect.top + (ownerHeight - actualDialogHeight) / 2,
+            0,
+            0,
+            SWP_NOSIZE
+        );
+    }
+
+    EnableWindow(hwnd, FALSE);
+    ShowWindow(hDialog, SW_SHOW);
+
+    while (IsWindow(hDialog) && GetMessageW(&msg, NULL, 0, 0)) {
+
+        if (!IsDialogMessageW(hDialog, &msg)) {
+            TranslateMessage(&msg);
+            DispatchMessageW(&msg);
+        }
+    }
+
+    EnableWindow(hwnd, TRUE);
+    SetActiveWindow(hwnd);
+}
+
 // Program entry point and main message loop
 int WINAPI wWinMain(
     _In_ HINSTANCE hInstance,
@@ -362,7 +451,7 @@ int WINAPI wWinMain(
         WS_OVERLAPPED | WS_MINIMIZEBOX | WS_SYSMENU | WS_VISIBLE,
         0,
         0,
-        690,
+        810,
         370,
         NULL,
         NULL,
@@ -484,7 +573,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         case ID_GENERATEBUTTON:
 
             if (!generatePasswordChoices()) {
-                MessageBoxW(hwnd, L"Not possible!", L"Error", MB_OK);
+                showErrorDialog(hwnd);
             }
 
             break;
@@ -629,6 +718,34 @@ LRESULT CALLBACK AboutWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
         DestroyWindow(hwnd);
         return 0;
+
+    case WM_SYSCOMMAND:
+
+        if ((wParam & 0xFFF0) == SC_MOVE) {
+            return 0;
+        }
+
+        break;
+
+    case WM_NCLBUTTONDOWN:
+    case WM_NCLBUTTONDBLCLK:
+
+        if (wParam == HTCAPTION) {
+            return 0;
+        }
+
+        break;
+
+    case WM_NCHITTEST:
+    {
+        LRESULT hitTest = DefWindowProcW(hwnd, msg, wParam, lParam);
+
+        if (hitTest == HTCAPTION) {
+            return HTCLIENT;
+        }
+
+        return hitTest;
+    }
     }
 
     return DefWindowProcW(hwnd, msg, wParam, lParam);
