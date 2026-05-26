@@ -29,9 +29,10 @@
 #define ID_COPYBUTTON3      20
 #define ID_PASSWORDTEXTBOX4 21
 #define ID_COPYBUTTON4      22
+#define ID_STATUSBAR        23
 
 // Password limits
 #define MIN_PASS_LENGTH      8
 #define MAX_PASS_LENGTH     32
-#define DEFAULT_PASS_LENGTH 16
+#define DEFAULT_PASS_LENGTH 17
 #define DEFAULT_MAX_SYMBOLS  3

@@ -71,7 +71,7 @@ int8_t loadSettings(void) {
     incSymbols = true;
     incLowerChars = true;
     incUpperChars = true;
-    avoidAmbChars = false;
+    avoidAmbChars = true;
     passwordLength = DEFAULT_PASS_LENGTH;
     maxSymbols = DEFAULT_MAX_SYMBOLS;
 

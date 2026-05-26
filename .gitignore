@@ -364,3 +364,6 @@ FodyWeavers.xsd
 
 # Executables
 *.exe
+
+# Runtime user settings
+settings.json

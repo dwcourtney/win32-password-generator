@@ -18,10 +18,11 @@ int8_t passTextLength;
 int8_t maxSymbols;
 
 // Handle to the output textbox control
-HWND hOut;
-HWND hOut2;
-HWND hOut3;
-HWND hOut4;
+HWND hPasswordBox1;
+HWND hPasswordBox2;
+HWND hPasswordBox3;
+HWND hPasswordBox4;
+HWND hStatus;
 HFONT hUiFont;
 HFONT hPasswordFont;
 HBRUSH hPasswordBkBrush;

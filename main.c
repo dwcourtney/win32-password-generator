@@ -1,4 +1,4 @@
-﻿#include <windows.h>
+#include <windows.h>
 #include <commctrl.h>
 
 #include "main.h"
@@ -7,6 +7,7 @@
 #include "util.h"
 #include "settings.h"
 #include "state.h"
+#include <ctype.h>
 #include <string.h>
 #include <sal.h>
 #include <stdio.h>
@@ -17,6 +18,15 @@
 // Forward declaration of the window procedure
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK AboutWndProc(HWND, UINT, WPARAM, LPARAM);
+
+#define BIGINT_MAX_DIGITS 128
+
+typedef struct BigInt {
+    int digits[BIGINT_MAX_DIGITS];
+    int length;
+} BigInt;
+
+static wchar_t passwordSpaceStatusText[512];
 
 static bool generatePasswordChoice(HWND hPasswordTextBox) {
 
@@ -33,24 +43,24 @@ static bool generatePasswordChoice(HWND hPasswordTextBox) {
 
 static bool generatePasswordChoices(void) {
 
-    SetWindowTextW(hOut, L"");
-    SetWindowTextW(hOut2, L"");
-    SetWindowTextW(hOut3, L"");
-    SetWindowTextW(hOut4, L"");
+    SetWindowTextW(hPasswordBox1, L"");
+    SetWindowTextW(hPasswordBox2, L"");
+    SetWindowTextW(hPasswordBox3, L"");
+    SetWindowTextW(hPasswordBox4, L"");
 
-    if (!generatePasswordChoice(hOut)) {
+    if (!generatePasswordChoice(hPasswordBox1)) {
         return false;
     }
 
-    if (!generatePasswordChoice(hOut2)) {
+    if (!generatePasswordChoice(hPasswordBox2)) {
         return false;
     }
 
-    if (!generatePasswordChoice(hOut3)) {
+    if (!generatePasswordChoice(hPasswordBox3)) {
         return false;
     }
 
-    if (!generatePasswordChoice(hOut4)) {
+    if (!generatePasswordChoice(hPasswordBox4)) {
         return false;
     }
 
@@ -103,10 +113,288 @@ static int copyPasswordText(HWND hwnd, HWND hPasswordTextBox) {
 
 static bool isPasswordTextBox(HWND hwnd) {
 
-    return hwnd == hOut ||
-        hwnd == hOut2 ||
-        hwnd == hOut3 ||
-        hwnd == hOut4;
+    return hwnd == hPasswordBox1 ||
+        hwnd == hPasswordBox2 ||
+        hwnd == hPasswordBox3 ||
+        hwnd == hPasswordBox4;
+}
+
+static void bigIntSetZero(BigInt* value) {
+
+    memset(value->digits, 0, sizeof(value->digits));
+    value->length = 1;
+}
+
+static void bigIntSetUInt(BigInt* value, uint32_t number) {
+
+    bigIntSetZero(value);
+
+    if (number == 0) {
+        return;
+    }
+
+    value->length = 0;
+
+    while (number > 0 && value->length < BIGINT_MAX_DIGITS) {
+        value->digits[value->length++] = number % 10;
+        number /= 10;
+    }
+}
+
+static void bigIntAdd(BigInt* value, const BigInt* addend) {
+
+    int carry = 0;
+    int maxLength = value->length > addend->length ? value->length : addend->length;
+
+    for (int i = 0; i < maxLength || carry; i++) {
+
+        int sum = carry;
+
+        if (i < value->length) {
+            sum += value->digits[i];
+        }
+
+        if (i < addend->length) {
+            sum += addend->digits[i];
+        }
+
+        value->digits[i] = sum % 10;
+        carry = sum / 10;
+
+        if (i >= value->length) {
+            value->length = i + 1;
+        }
+    }
+}
+
+static void bigIntMultiplyUInt(BigInt* value, uint32_t factor) {
+
+    uint32_t carry = 0;
+
+    if (factor == 0) {
+        bigIntSetZero(value);
+        return;
+    }
+
+    for (int i = 0; i < value->length; i++) {
+
+        uint32_t product = (uint32_t)value->digits[i] * factor + carry;
+
+        value->digits[i] = product % 10;
+        carry = product / 10;
+    }
+
+    while (carry > 0 && value->length < BIGINT_MAX_DIGITS) {
+        value->digits[value->length++] = carry % 10;
+        carry /= 10;
+    }
+}
+
+static void bigIntMultiply(BigInt* value, const BigInt* factor) {
+
+    BigInt result;
+
+    bigIntSetZero(&result);
+
+    for (int i = 0; i < value->length; i++) {
+
+        int carry = 0;
+
+        for (int j = 0; j < factor->length || carry; j++) {
+
+            int index = i + j;
+            int product = result.digits[index] + carry;
+
+            if (j < factor->length) {
+                product += value->digits[i] * factor->digits[j];
+            }
+
+            result.digits[index] = product % 10;
+            carry = product / 10;
+
+            if (index >= result.length) {
+                result.length = index + 1;
+            }
+        }
+    }
+
+    while (result.length > 1 && result.digits[result.length - 1] == 0) {
+        result.length--;
+    }
+
+    *value = result;
+}
+
+static void bigIntPowerUInt(BigInt* value, uint32_t base, int exponent) {
+
+    bigIntSetUInt(value, 1);
+
+    for (int i = 0; i < exponent; i++) {
+        bigIntMultiplyUInt(value, base);
+    }
+}
+
+static void bigIntCombination(BigInt* value, int n, int k) {
+
+    BigInt row[MAX_PASS_LENGTH + 1];
+
+    if (k < 0 || k > n) {
+        bigIntSetZero(value);
+        return;
+    }
+
+    for (int i = 0; i <= n; i++) {
+        bigIntSetZero(&row[i]);
+    }
+
+    bigIntSetUInt(&row[0], 1);
+
+    for (int i = 1; i <= n; i++) {
+
+        for (int j = i; j > 0; j--) {
+            bigIntAdd(&row[j], &row[j - 1]);
+        }
+    }
+
+    *value = row[k];
+}
+
+static void bigIntFormat(const BigInt* value, wchar_t* buffer, size_t size) {
+
+    wchar_t plain[BIGINT_MAX_DIGITS + 1] = { 0 };
+    wchar_t grouped[BIGINT_MAX_DIGITS + (BIGINT_MAX_DIGITS / 3) + 1] = { 0 };
+    int plainIndex = 0;
+    int groupedIndex = 0;
+
+    for (int i = value->length - 1; i >= 0; i--) {
+        plain[plainIndex++] = (wchar_t)(L'0' + value->digits[i]);
+    }
+
+    plain[plainIndex] = L'\0';
+
+    for (int i = 0; i < plainIndex; i++) {
+
+        if (i > 0 && ((plainIndex - i) % 3) == 0) {
+            grouped[groupedIndex++] = L',';
+        }
+
+        grouped[groupedIndex++] = plain[i];
+    }
+
+    grouped[groupedIndex] = L'\0';
+
+    swprintf(buffer, size, L"Possible Passwords: %ls", grouped);
+}
+
+static void syncSettingsFromControls(HWND hwnd) {
+
+    BOOL translated = FALSE;
+    UINT value;
+
+    incNumbers = IsDlgButtonChecked(hwnd, ID_INCNUMBERS) == BST_CHECKED;
+    incSymbols = IsDlgButtonChecked(hwnd, ID_INCSYMBOLS) == BST_CHECKED;
+    incLowerChars = IsDlgButtonChecked(hwnd, ID_INCLOWERCHARS) == BST_CHECKED;
+    incUpperChars = IsDlgButtonChecked(hwnd, ID_INCUPPERCHARS) == BST_CHECKED;
+    avoidAmbChars = IsDlgButtonChecked(hwnd, ID_AVOIDAMBCHARS) == BST_CHECKED;
+
+    value = GetDlgItemInt(hwnd, ID_EDIT, &translated, FALSE);
+
+    if (translated) {
+
+        if (value < MIN_PASS_LENGTH) {
+            value = MIN_PASS_LENGTH;
+        }
+
+        if (value > MAX_PASS_LENGTH) {
+            value = MAX_PASS_LENGTH;
+        }
+
+        passwordLength = (int8_t)value;
+    }
+
+    value = GetDlgItemInt(hwnd, ID_MAXSYMBOLSEDIT, &translated, FALSE);
+
+    if (translated) {
+
+        if (value > MAX_PASS_LENGTH) {
+            value = MAX_PASS_LENGTH;
+        }
+
+        maxSymbols = (int8_t)value;
+    }
+}
+
+static void updatePasswordSpaceStatus(HWND hwnd) {
+
+    BigInt total;
+    uint32_t symbolCount = 0;
+    uint32_t nonSymbolCount = 0;
+    uint32_t poolCount = 0;
+
+    if (hStatus == NULL) {
+        return;
+    }
+
+    syncSettingsFromControls(hwnd);
+
+    for (uint8_t c = 33; c <= 126; c++) {
+
+        if (!incNumbers && isdigit(c)) continue;
+        if (!incSymbols && ispunct(c)) continue;
+        if (!incLowerChars && islower(c)) continue;
+        if (!incUpperChars && isupper(c)) continue;
+
+        if (avoidAmbChars &&
+            (c == '0' || c == '1' ||
+                c == 'I' || c == 'O' ||
+                c == 'i' || c == 'l' ||
+                c == 'o' || c == '|'))
+        {
+            continue;
+        }
+
+        if (ispunct(c)) {
+            symbolCount++;
+        }
+        else {
+            nonSymbolCount++;
+        }
+    }
+
+    poolCount = symbolCount + nonSymbolCount;
+
+    if (poolCount == 0) {
+        bigIntSetZero(&total);
+    }
+    else if (!incSymbols || symbolCount == 0 || maxSymbols >= passwordLength) {
+        bigIntPowerUInt(&total, poolCount, passwordLength);
+    }
+    else {
+
+        int maxSymbolCount = maxSymbols < passwordLength ? maxSymbols : passwordLength;
+
+        bigIntSetZero(&total);
+
+        for (int i = 0; i <= maxSymbolCount; i++) {
+
+            BigInt term;
+            BigInt multiplier;
+
+            bigIntCombination(&term, passwordLength, i);
+
+            bigIntPowerUInt(&multiplier, symbolCount, i);
+            bigIntMultiply(&term, &multiplier);
+
+            bigIntPowerUInt(&multiplier, nonSymbolCount, passwordLength - i);
+            bigIntMultiply(&term, &multiplier);
+
+            bigIntAdd(&total, &term);
+        }
+    }
+
+    bigIntFormat(&total, passwordSpaceStatusText, sizeof(passwordSpaceStatusText) / sizeof(passwordSpaceStatusText[0]));
+    SendMessageW(hStatus, SB_SETTEXTW, SBT_OWNERDRAW, 0);
+    InvalidateRect(hStatus, NULL, TRUE);
 }
 
 static void showAboutDialog(HWND hwnd) {
@@ -452,7 +740,7 @@ int WINAPI wWinMain(
         0,
         0,
         810,
-        370,
+        400,
         NULL,
         NULL,
         hInstance,
@@ -486,6 +774,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         centerWindow(hwnd);
 
         hPasswordBkBrush = CreateSolidBrush(RGB(255, 255, 255));
+        updatePasswordSpaceStatus(hwnd);
 
         // Generate the initial passwords displayed in the UI
         generatePasswordChoices();
@@ -581,22 +870,22 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         // Copy the first generated password to the system clipboard
         case ID_COPYBUTTON:
 
-            return copyPasswordText(hwnd, hOut);
+            return copyPasswordText(hwnd, hPasswordBox1);
 
         // Copy the second generated password to the system clipboard
         case ID_COPYBUTTON2:
 
-            return copyPasswordText(hwnd, hOut2);
+            return copyPasswordText(hwnd, hPasswordBox2);
 
         // Copy the third generated password to the system clipboard
         case ID_COPYBUTTON3:
 
-            return copyPasswordText(hwnd, hOut3);
+            return copyPasswordText(hwnd, hPasswordBox3);
 
         // Copy the fourth generated password to the system clipboard
         case ID_COPYBUTTON4:
 
-            return copyPasswordText(hwnd, hOut4);
+            return copyPasswordText(hwnd, hPasswordBox4);
 
             break;
 
@@ -619,10 +908,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         case IDM_FILE_QUIT:
 
             SendMessage(hwnd, WM_CLOSE, 0, 0);
-
-            break;
+            return 0;
         }
 
+        updatePasswordSpaceStatus(hwnd);
         break;
 
 
@@ -659,9 +948,56 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                     maxSymbols = MAX_PASS_LENGTH;
                 }
             }
+
+            updatePasswordSpaceStatus(hwnd);
         }
 
         break;
+
+    case WM_SIZE:
+
+        if (hStatus != NULL) {
+            SendMessageW(hStatus, WM_SIZE, 0, 0);
+        }
+
+        break;
+
+    case WM_DRAWITEM:
+    {
+        DRAWITEMSTRUCT* drawItem = (DRAWITEMSTRUCT*)lParam;
+
+        if (drawItem != NULL && drawItem->CtlID == ID_STATUSBAR) {
+
+            RECT textRect = drawItem->rcItem;
+            HFONT hOldFont = NULL;
+
+            textRect.left += 10;
+
+            FillRect(drawItem->hDC, &drawItem->rcItem, GetSysColorBrush(COLOR_3DFACE));
+            SetBkMode(drawItem->hDC, TRANSPARENT);
+            SetTextColor(drawItem->hDC, GetSysColor(COLOR_WINDOWTEXT));
+
+            if (hUiFont != NULL) {
+                hOldFont = (HFONT)SelectObject(drawItem->hDC, hUiFont);
+            }
+
+            DrawTextW(
+                drawItem->hDC,
+                passwordSpaceStatusText,
+                -1,
+                &textRect,
+                DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX
+            );
+
+            if (hOldFont != NULL) {
+                SelectObject(drawItem->hDC, hOldFont);
+            }
+
+            return TRUE;
+        }
+
+        break;
+    }
 
     // Keep read-only password textboxes visually white
     case WM_CTLCOLORSTATIC:

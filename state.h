@@ -18,10 +18,11 @@ extern int8_t passTextLength;
 extern int8_t maxSymbols;
 
 // Handle to password output textbox
-extern HWND hOut;
-extern HWND hOut2;
-extern HWND hOut3;
-extern HWND hOut4;
+extern HWND hPasswordBox1;
+extern HWND hPasswordBox2;
+extern HWND hPasswordBox3;
+extern HWND hPasswordBox4;
+extern HWND hStatus;
 extern HFONT hUiFont;
 extern HFONT hPasswordFont;
 extern HBRUSH hPasswordBkBrush;

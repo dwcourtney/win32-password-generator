@@ -203,33 +203,33 @@ void createOtherControls(HWND hwnd) {
     setUiFont(hControl);
 
     // Password output textboxes
-    hOut = CreateWindowW(L"Edit", L"",
+    hPasswordBox1 = CreateWindowW(L"Edit", L"",
         WS_VISIBLE | WS_CHILD | WS_BORDER | ES_CENTER | ES_READONLY | ES_MULTILINE,
         290, passwordY1, passwordBoxWidth, passwordBoxHeight,
         hwnd, (HMENU)ID_PASSWORDTEXTBOX, NULL, NULL);
-    setPasswordFont(hOut);
-    centerPasswordText(hOut, passwordBoxWidth, passwordBoxHeight);
+    setPasswordFont(hPasswordBox1);
+    centerPasswordText(hPasswordBox1, passwordBoxWidth, passwordBoxHeight);
 
-    hOut2 = CreateWindowW(L"Edit", L"",
+    hPasswordBox2 = CreateWindowW(L"Edit", L"",
         WS_VISIBLE | WS_CHILD | WS_BORDER | ES_CENTER | ES_READONLY | ES_MULTILINE,
         290, passwordY2, passwordBoxWidth, passwordBoxHeight,
         hwnd, (HMENU)ID_PASSWORDTEXTBOX2, NULL, NULL);
-    setPasswordFont(hOut2);
-    centerPasswordText(hOut2, passwordBoxWidth, passwordBoxHeight);
+    setPasswordFont(hPasswordBox2);
+    centerPasswordText(hPasswordBox2, passwordBoxWidth, passwordBoxHeight);
 
-    hOut3 = CreateWindowW(L"Edit", L"",
+    hPasswordBox3 = CreateWindowW(L"Edit", L"",
         WS_VISIBLE | WS_CHILD | WS_BORDER | ES_CENTER | ES_READONLY | ES_MULTILINE,
         290, passwordY3, passwordBoxWidth, passwordBoxHeight,
         hwnd, (HMENU)ID_PASSWORDTEXTBOX3, NULL, NULL);
-    setPasswordFont(hOut3);
-    centerPasswordText(hOut3, passwordBoxWidth, passwordBoxHeight);
+    setPasswordFont(hPasswordBox3);
+    centerPasswordText(hPasswordBox3, passwordBoxWidth, passwordBoxHeight);
 
-    hOut4 = CreateWindowW(L"Edit", L"",
+    hPasswordBox4 = CreateWindowW(L"Edit", L"",
         WS_VISIBLE | WS_CHILD | WS_BORDER | ES_CENTER | ES_READONLY | ES_MULTILINE,
         290, passwordY4, passwordBoxWidth, passwordBoxHeight,
         hwnd, (HMENU)ID_PASSWORDTEXTBOX4, NULL, NULL);
-    setPasswordFont(hOut4);
-    centerPasswordText(hOut4, passwordBoxWidth, passwordBoxHeight);
+    setPasswordFont(hPasswordBox4);
+    centerPasswordText(hPasswordBox4, passwordBoxWidth, passwordBoxHeight);
 
     // Copy buttons
     hCopyButton = CreateWindowW(L"Button", L"Copy",
@@ -284,6 +284,14 @@ void createOtherControls(HWND hwnd) {
         addCopyTooltip(hwnd, hToolTip, GetDlgItem(hwnd, ID_COPYBUTTON3));
         addCopyTooltip(hwnd, hToolTip, GetDlgItem(hwnd, ID_COPYBUTTON4));
     }
+
+    // Status bar for password space
+    hStatus = CreateWindowW(STATUSCLASSNAMEW, L"",
+        WS_VISIBLE | WS_CHILD,
+        0, 0, 0, 0,
+        hwnd, (HMENU)ID_STATUSBAR, NULL, NULL);
+    setUiFont(hStatus);
+    SendMessageW(hStatus, WM_SIZE, 0, 0);
 
     // Up-down control for password length
     hUpDown = CreateWindowW(UPDOWN_CLASSW, NULL,
