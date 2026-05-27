@@ -36,10 +36,10 @@ HBRUSH hPasswordImpossibleBkBrush;
 bool passwordGenerationPossible = true;
 
 // User option flags controlling allowed character classes
-bool incNumbers;
-bool incSymbols;
-bool incLowerChars;
-bool incUpperChars;
+bool allowNumbers;
+bool allowSymbols;
+bool allowLowerChars;
+bool allowUpperChars;
 bool avoidAmbChars;
 
 // Path to the JSON settings file

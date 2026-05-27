@@ -131,40 +131,40 @@ void createCheckBoxes(HWND hwnd) {
     hControl = CreateWindowW(L"button", L"Allow Numbers",
         WS_VISIBLE | WS_CHILD | BS_CHECKBOX,
         checkBoxXpos, checkBoxYpos, checkBoxWidth, checkBoxHeight,
-        hwnd, (HMENU)ID_INCNUMBERS, NULL, NULL);
+        hwnd, (HMENU)ID_ALLOWNUMBERS, NULL, NULL);
     setUiFont(hControl);
 
-    CheckDlgButton(hwnd, ID_INCNUMBERS, incNumbers ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(hwnd, ID_ALLOWNUMBERS, allowNumbers ? BST_CHECKED : BST_UNCHECKED);
 
     // Allow Symbols checkbox
     checkBoxYpos += checkBoxYdiff;
     hControl = CreateWindowW(L"button", L"Allow Symbols",
         WS_VISIBLE | WS_CHILD | BS_CHECKBOX,
         checkBoxXpos, checkBoxYpos, checkBoxWidth, checkBoxHeight,
-        hwnd, (HMENU)ID_INCSYMBOLS, NULL, NULL);
+        hwnd, (HMENU)ID_ALLOWSYMBOLS, NULL, NULL);
     setUiFont(hControl);
 
-    CheckDlgButton(hwnd, ID_INCSYMBOLS, incSymbols ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(hwnd, ID_ALLOWSYMBOLS, allowSymbols ? BST_CHECKED : BST_UNCHECKED);
 
     // Allow Lowercase checkbox
     checkBoxYpos += checkBoxYdiff;
     hControl = CreateWindowW(L"button", L"Allow Lowercase Characters",
         WS_VISIBLE | WS_CHILD | BS_CHECKBOX,
         checkBoxXpos, checkBoxYpos, checkBoxWidth, checkBoxHeight,
-        hwnd, (HMENU)ID_INCLOWERCHARS, NULL, NULL);
+        hwnd, (HMENU)ID_ALLOWLOWERCHARS, NULL, NULL);
     setUiFont(hControl);
 
-    CheckDlgButton(hwnd, ID_INCLOWERCHARS, incLowerChars ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(hwnd, ID_ALLOWLOWERCHARS, allowLowerChars ? BST_CHECKED : BST_UNCHECKED);
 
     // Allow Uppercase checkbox
     checkBoxYpos += checkBoxYdiff;
     hControl = CreateWindowW(L"button", L"Allow Uppercase Characters",
         WS_VISIBLE | WS_CHILD | BS_CHECKBOX,
         checkBoxXpos, checkBoxYpos, checkBoxWidth, checkBoxHeight,
-        hwnd, (HMENU)ID_INCUPPERCHARS, NULL, NULL);
+        hwnd, (HMENU)ID_ALLOWUPPERCHARS, NULL, NULL);
     setUiFont(hControl);
 
-    CheckDlgButton(hwnd, ID_INCUPPERCHARS, incUpperChars ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(hwnd, ID_ALLOWUPPERCHARS, allowUpperChars ? BST_CHECKED : BST_UNCHECKED);
 
     // Avoid ambiguous characters checkbox
     checkBoxYpos += checkBoxYdiff;
@@ -354,8 +354,8 @@ void createOtherControls(HWND hwnd) {
     SendMessageW(hMaxSymbolsUpDown, UDM_SETBUDDY, (WPARAM)hMaxSymbolsEdit, 0);
     SendMessageW(hMaxSymbolsUpDown, UDM_SETRANGE, 0, MAKELPARAM(passwordLength, 0));
     SendMessageW(hMaxSymbolsUpDown, UDM_SETPOS32, 0, maxSymbols);
-    EnableWindow(hMaxSymbolsEdit, incSymbols);
-    EnableWindow(hMaxSymbolsUpDown, incSymbols);
+    EnableWindow(hMaxSymbolsEdit, allowSymbols);
+    EnableWindow(hMaxSymbolsUpDown, allowSymbols);
 }
 
 

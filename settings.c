@@ -10,6 +10,17 @@
 
 #pragma warning(disable : 4996)
 
+static bool loadBoolSetting(cJSON* json, const char* name, bool defaultValue) {
+
+    cJSON* data = cJSON_GetObjectItemCaseSensitive(json, name);
+
+    if (cJSON_IsBool(data)) {
+        return cJSON_IsTrue(data);
+    }
+
+    return defaultValue;
+}
+
 int8_t saveSettings(void) {
 
     FILE* filePointer;
@@ -21,10 +32,10 @@ int8_t saveSettings(void) {
     }
 
     // Populate the JSON object with current configuration values
-    cJSON_AddBoolToObject(json, "incNumbers", incNumbers);
-    cJSON_AddBoolToObject(json, "incSymbols", incSymbols);
-    cJSON_AddBoolToObject(json, "incLowerChars", incLowerChars);
-    cJSON_AddBoolToObject(json, "incUpperChars", incUpperChars);
+    cJSON_AddBoolToObject(json, "allowNumbers", allowNumbers);
+    cJSON_AddBoolToObject(json, "allowSymbols", allowSymbols);
+    cJSON_AddBoolToObject(json, "allowLowerChars", allowLowerChars);
+    cJSON_AddBoolToObject(json, "allowUpperChars", allowUpperChars);
     cJSON_AddBoolToObject(json, "avoidAmbChars", avoidAmbChars);
     cJSON_AddNumberToObject(json, "passwordLength", passwordLength);
     cJSON_AddNumberToObject(json, "maxSymbols", maxSymbols);
@@ -67,10 +78,10 @@ int8_t loadSettings(void) {
     FILE* filePointer;
 
     // Initialize default configuration values
-    incNumbers = true;
-    incSymbols = true;
-    incLowerChars = true;
-    incUpperChars = true;
+    allowNumbers = true;
+    allowSymbols = true;
+    allowLowerChars = true;
+    allowUpperChars = true;
     avoidAmbChars = true;
     passwordLength = DEFAULT_PASS_LENGTH;
     maxSymbols = DEFAULT_MAX_SYMBOLS;
@@ -103,30 +114,11 @@ int8_t loadSettings(void) {
         cJSON* data;
 
         // Extract and apply each configuration setting
-        data = cJSON_GetObjectItemCaseSensitive(json, "incNumbers");
-        if (cJSON_IsBool(data) && cJSON_IsFalse(data)) {
-            incNumbers = false;
-        }
-
-        data = cJSON_GetObjectItemCaseSensitive(json, "incSymbols");
-        if (cJSON_IsBool(data) && cJSON_IsFalse(data)) {
-            incSymbols = false;
-        }
-
-        data = cJSON_GetObjectItemCaseSensitive(json, "incLowerChars");
-        if (cJSON_IsBool(data) && cJSON_IsFalse(data)) {
-            incLowerChars = false;
-        }
-
-        data = cJSON_GetObjectItemCaseSensitive(json, "incUpperChars");
-        if (cJSON_IsBool(data) && cJSON_IsFalse(data)) {
-            incUpperChars = false;
-        }
-
-        data = cJSON_GetObjectItemCaseSensitive(json, "avoidAmbChars");
-        if (cJSON_IsBool(data) && cJSON_IsTrue(data)) {
-            avoidAmbChars = true;
-        }
+        allowNumbers = loadBoolSetting(json, "allowNumbers", allowNumbers);
+        allowSymbols = loadBoolSetting(json, "allowSymbols", allowSymbols);
+        allowLowerChars = loadBoolSetting(json, "allowLowerChars", allowLowerChars);
+        allowUpperChars = loadBoolSetting(json, "allowUpperChars", allowUpperChars);
+        avoidAmbChars = loadBoolSetting(json, "avoidAmbChars", avoidAmbChars);
 
         data = cJSON_GetObjectItemCaseSensitive(json, "passwordLength");
 

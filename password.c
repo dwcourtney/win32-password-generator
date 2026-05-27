@@ -10,10 +10,10 @@ PSEUDOCODE / DETAILED PLAN:
   1. Validate `passwordLength` is within 1..MAX_PASS_LENGTH.
   2. Ensure at least one character class flag is enabled.
   3. Build an `allowed` character pool by iterating printable ASCII 33..126:
-     - Skip digits if `incNumbers == false`.
-     - Skip punctuation if `incSymbols == false`.
-     - Skip lowercase letters if `incLowerChars == false`.
-     - Skip uppercase letters if `incUpperChars == false`.
+     - Skip digits if `allowNumbers == false`.
+     - Skip punctuation if `allowSymbols == false`.
+     - Skip lowercase letters if `allowLowerChars == false`.
+     - Skip uppercase letters if `allowUpperChars == false`.
      - If `avoidAmbChars == true`, exclude ambiguous characters: 0,1,I,O,i,l,o,|.
      - Append allowed characters to `allowed` array and increment `allowedCount`.
   4. If `allowedCount == 0` return failure (NULL/0).
@@ -46,10 +46,10 @@ PSEUDOCODE / DETAILED PLAN:
 
 extern wchar_t passwordArray[MAX_PASS_LENGTH + 1];
 extern int8_t passwordLength;
-extern bool incNumbers;
-extern bool incSymbols;
-extern bool incLowerChars;
-extern bool incUpperChars;
+extern bool allowNumbers;
+extern bool allowSymbols;
+extern bool allowLowerChars;
+extern bool allowUpperChars;
 extern bool avoidAmbChars;
 extern int8_t maxSymbols;
 
@@ -73,19 +73,19 @@ wchar_t* generatePassword(void) {
     }
 
     // Ensure at least one character category is enabled
-    if (!(incNumbers || incSymbols || incLowerChars || incUpperChars)) {
+    if (!(allowNumbers || allowSymbols || allowLowerChars || allowUpperChars)) {
         return 0;
     }
 
     // Build the allowed character pool based on user settings
-    // We iterate through printable ASCII characters 33–126 and include
+    // We iterate through printable ASCII characters 33-126 and allow
     // only those that pass the user's filtering rules.
     for (uint8_t c = 33; c <= 126; c++) {
 
-        if (!incNumbers && isdigit(c)) continue;
-        if (!incSymbols && ispunct(c)) continue;
-        if (!incLowerChars && islower(c)) continue;
-        if (!incUpperChars && isupper(c)) continue;
+        if (!allowNumbers && isdigit(c)) continue;
+        if (!allowSymbols && ispunct(c)) continue;
+        if (!allowLowerChars && islower(c)) continue;
+        if (!allowUpperChars && isupper(c)) continue;
 
         // Optionally remove visually ambiguous characters
         if (avoidAmbChars &&
@@ -118,7 +118,7 @@ wchar_t* generatePassword(void) {
         wchar_t* selectedAllowed = allowed;
         uint8_t selectedAllowedCount = allowedCount;
 
-        if (incSymbols && symbolCount >= maxSymbols) {
+        if (allowSymbols && symbolCount >= maxSymbols) {
             selectedAllowed = nonSymbolAllowed;
             selectedAllowedCount = nonSymbolAllowedCount;
         }
@@ -138,7 +138,7 @@ wchar_t* generatePassword(void) {
         index = randomByte % selectedAllowedCount;
         passwordArray[i] = selectedAllowed[index];
 
-        if (incSymbols && ispunct((unsigned char)passwordArray[i])) {
+        if (allowSymbols && ispunct((unsigned char)passwordArray[i])) {
             symbolCount++;
         }
     }

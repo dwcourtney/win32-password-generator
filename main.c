@@ -161,10 +161,10 @@ static bool getPasswordPoolCounts(uint32_t* symbolCount, uint32_t* nonSymbolCoun
 
     for (uint8_t c = 33; c <= 126; c++) {
 
-        if (!incNumbers && isdigit(c)) continue;
-        if (!incSymbols && ispunct(c)) continue;
-        if (!incLowerChars && islower(c)) continue;
-        if (!incUpperChars && isupper(c)) continue;
+        if (!allowNumbers && isdigit(c)) continue;
+        if (!allowSymbols && ispunct(c)) continue;
+        if (!allowLowerChars && islower(c)) continue;
+        if (!allowUpperChars && isupper(c)) continue;
 
         if (avoidAmbChars &&
             (c == '0' || c == '1' ||
@@ -195,7 +195,7 @@ static bool canGeneratePassword(void) {
         return false;
     }
 
-    if (!(incNumbers || incSymbols || incLowerChars || incUpperChars)) {
+    if (!(allowNumbers || allowSymbols || allowLowerChars || allowUpperChars)) {
         return false;
     }
 
@@ -203,7 +203,7 @@ static bool canGeneratePassword(void) {
         return false;
     }
 
-    if (incSymbols && maxSymbols < passwordLength && nonSymbolCount == 0) {
+    if (allowSymbols && maxSymbols < passwordLength && nonSymbolCount == 0) {
         return false;
     }
 
@@ -454,10 +454,10 @@ static void syncSettingsFromControls(HWND hwnd) {
     BOOL translated = FALSE;
     UINT value;
 
-    incNumbers = IsDlgButtonChecked(hwnd, ID_INCNUMBERS) == BST_CHECKED;
-    incSymbols = IsDlgButtonChecked(hwnd, ID_INCSYMBOLS) == BST_CHECKED;
-    incLowerChars = IsDlgButtonChecked(hwnd, ID_INCLOWERCHARS) == BST_CHECKED;
-    incUpperChars = IsDlgButtonChecked(hwnd, ID_INCUPPERCHARS) == BST_CHECKED;
+    allowNumbers = IsDlgButtonChecked(hwnd, ID_ALLOWNUMBERS) == BST_CHECKED;
+    allowSymbols = IsDlgButtonChecked(hwnd, ID_ALLOWSYMBOLS) == BST_CHECKED;
+    allowLowerChars = IsDlgButtonChecked(hwnd, ID_ALLOWLOWERCHARS) == BST_CHECKED;
+    allowUpperChars = IsDlgButtonChecked(hwnd, ID_ALLOWUPPERCHARS) == BST_CHECKED;
     avoidAmbChars = IsDlgButtonChecked(hwnd, ID_AVOIDAMBCHARS) == BST_CHECKED;
 
     value = GetDlgItemInt(hwnd, ID_EDIT, &translated, FALSE);
@@ -507,7 +507,7 @@ static void updatePasswordSpaceStatus(HWND hwnd) {
     if (poolCount == 0) {
         bigIntSetZero(&total);
     }
-    else if (!incSymbols || symbolCount == 0 || maxSymbols >= passwordLength) {
+    else if (!allowSymbols || symbolCount == 0 || maxSymbols >= passwordLength) {
         bigIntPowerUInt(&total, poolCount, passwordLength);
     }
     else {
@@ -1060,65 +1060,65 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         bool shouldGeneratePasswords = false;
 
         // Read current checkbox states
-        incNumbers = IsDlgButtonChecked(hwnd, ID_INCNUMBERS);
-        incSymbols = IsDlgButtonChecked(hwnd, ID_INCSYMBOLS);
-        incLowerChars = IsDlgButtonChecked(hwnd, ID_INCLOWERCHARS);
-        incUpperChars = IsDlgButtonChecked(hwnd, ID_INCUPPERCHARS);
+        allowNumbers = IsDlgButtonChecked(hwnd, ID_ALLOWNUMBERS);
+        allowSymbols = IsDlgButtonChecked(hwnd, ID_ALLOWSYMBOLS);
+        allowLowerChars = IsDlgButtonChecked(hwnd, ID_ALLOWLOWERCHARS);
+        allowUpperChars = IsDlgButtonChecked(hwnd, ID_ALLOWUPPERCHARS);
         avoidAmbChars = IsDlgButtonChecked(hwnd, ID_AVOIDAMBCHARS);
 
         switch (LOWORD(wParam)) {
 
         // Toggle "Allow Numbers"
-        case ID_INCNUMBERS:
+        case ID_ALLOWNUMBERS:
 
-            if (incNumbers) {
-                CheckDlgButton(hwnd, ID_INCNUMBERS, BST_UNCHECKED);
+            if (allowNumbers) {
+                CheckDlgButton(hwnd, ID_ALLOWNUMBERS, BST_UNCHECKED);
             }
             else {
-                CheckDlgButton(hwnd, ID_INCNUMBERS, BST_CHECKED);
+                CheckDlgButton(hwnd, ID_ALLOWNUMBERS, BST_CHECKED);
             }
 
             shouldGeneratePasswords = true;
             break;
 
         // Toggle "Allow Symbols"
-        case ID_INCSYMBOLS:
+        case ID_ALLOWSYMBOLS:
 
-            if (incSymbols) {
-                CheckDlgButton(hwnd, ID_INCSYMBOLS, BST_UNCHECKED);
+            if (allowSymbols) {
+                CheckDlgButton(hwnd, ID_ALLOWSYMBOLS, BST_UNCHECKED);
             }
             else {
-                CheckDlgButton(hwnd, ID_INCSYMBOLS, BST_CHECKED);
+                CheckDlgButton(hwnd, ID_ALLOWSYMBOLS, BST_CHECKED);
             }
 
-            incSymbols = IsDlgButtonChecked(hwnd, ID_INCSYMBOLS);
-            EnableWindow(GetDlgItem(hwnd, ID_MAXSYMBOLSEDIT), incSymbols);
-            EnableWindow(GetDlgItem(hwnd, ID_MAXSYMBOLSUPDOWN), incSymbols);
+            allowSymbols = IsDlgButtonChecked(hwnd, ID_ALLOWSYMBOLS);
+            EnableWindow(GetDlgItem(hwnd, ID_MAXSYMBOLSEDIT), allowSymbols);
+            EnableWindow(GetDlgItem(hwnd, ID_MAXSYMBOLSUPDOWN), allowSymbols);
 
             shouldGeneratePasswords = true;
             break;
 
         // Toggle "Allow Lowercase Characters"
-        case ID_INCLOWERCHARS:
+        case ID_ALLOWLOWERCHARS:
 
-            if (incLowerChars) {
-                CheckDlgButton(hwnd, ID_INCLOWERCHARS, BST_UNCHECKED);
+            if (allowLowerChars) {
+                CheckDlgButton(hwnd, ID_ALLOWLOWERCHARS, BST_UNCHECKED);
             }
             else {
-                CheckDlgButton(hwnd, ID_INCLOWERCHARS, BST_CHECKED);
+                CheckDlgButton(hwnd, ID_ALLOWLOWERCHARS, BST_CHECKED);
             }
 
             shouldGeneratePasswords = true;
             break;
 
         // Toggle "Allow Uppercase Characters"
-        case ID_INCUPPERCHARS:
+        case ID_ALLOWUPPERCHARS:
 
-            if (incUpperChars) {
-                CheckDlgButton(hwnd, ID_INCUPPERCHARS, BST_UNCHECKED);
+            if (allowUpperChars) {
+                CheckDlgButton(hwnd, ID_ALLOWUPPERCHARS, BST_UNCHECKED);
             }
             else {
-                CheckDlgButton(hwnd, ID_INCUPPERCHARS, BST_CHECKED);
+                CheckDlgButton(hwnd, ID_ALLOWUPPERCHARS, BST_CHECKED);
             }
 
             shouldGeneratePasswords = true;

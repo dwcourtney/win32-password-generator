@@ -36,10 +36,10 @@ extern HBRUSH hPasswordImpossibleBkBrush;
 extern bool passwordGenerationPossible;
 
 // User option flags
-extern bool incNumbers;
-extern bool incSymbols;
-extern bool incLowerChars;
-extern bool incUpperChars;
+extern bool allowNumbers;
+extern bool allowSymbols;
+extern bool allowLowerChars;
+extern bool allowUpperChars;
 extern bool avoidAmbChars;
 
 // Path to settings JSON file

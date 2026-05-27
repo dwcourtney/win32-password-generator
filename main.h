@@ -7,10 +7,10 @@
 #define IDR_ICO_MAIN   8001
 
 // Control IDs
-#define ID_INCNUMBERS        1
-#define ID_INCSYMBOLS        2
-#define ID_INCLOWERCHARS     3
-#define ID_INCUPPERCHARS     4
+#define ID_ALLOWNUMBERS        1
+#define ID_ALLOWSYMBOLS        2
+#define ID_ALLOWLOWERCHARS     3
+#define ID_ALLOWUPPERCHARS     4
 #define ID_AVOIDAMBCHARS     5
 #define ID_GENERATEBUTTON    6
 #define ID_COPYBUTTON        7
