@@ -1,5 +1,9 @@
 #include <windows.h>
 #include <commctrl.h>
+#include <richedit.h>
+#include <malloc.h>
+#include <stdio.h>
+#include <sal.h>
 
 #include "main.h"
 #include "password.h"
@@ -7,10 +11,11 @@
 #include "util.h"
 #include "settings.h"
 #include "state.h"
+#include <stdbool.h>
+#include <stdint.h>
 #include <ctype.h>
 #include <string.h>
-#include <sal.h>
-#include <stdio.h>
+
 
 #pragma warning(disable : 4996)
 #pragma comment(lib, "comctl32.lib")
@@ -386,9 +391,16 @@ static void bigIntPowerUInt(BigInt* value, uint32_t base, int exponent) {
 
 static void bigIntCombination(BigInt* value, int n, int k) {
 
-    BigInt row[MAX_PASS_LENGTH + 1];
+    BigInt* row = NULL;
 
     if (k < 0 || k > n) {
+        bigIntSetZero(value);
+        return;
+    }
+
+    row = (BigInt*)calloc((size_t)n + 1, sizeof(BigInt));
+
+    if (row == NULL) {
         bigIntSetZero(value);
         return;
     }
@@ -407,6 +419,7 @@ static void bigIntCombination(BigInt* value, int n, int k) {
     }
 
     *value = row[k];
+    free(row);
 }
 
 static void bigIntFormat(const BigInt* value, wchar_t* buffer, size_t size) {
@@ -657,6 +670,50 @@ static void showAboutDialog(HWND hwnd) {
     SetActiveWindow(hwnd);
 }
 
+static void formatInfoHeader(HWND hwnd, const wchar_t* header) {
+
+    FINDTEXTEXW findText = { 0 };
+    CHARFORMAT2W charFormat = { 0 };
+
+    findText.chrg.cpMin = 0;
+    findText.chrg.cpMax = -1;
+    findText.lpstrText = (LPWSTR)header;
+
+    if (SendMessageW(hwnd, EM_FINDTEXTEXW, FR_DOWN, (LPARAM)&findText) == -1) {
+        return;
+    }
+
+    charFormat.cbSize = sizeof(CHARFORMAT2W);
+    charFormat.dwMask = CFM_BOLD | CFM_UNDERLINE;
+    charFormat.dwEffects = CFE_BOLD | CFE_UNDERLINE;
+
+    SendMessageW(hwnd, EM_SETSEL, findText.chrgText.cpMin, findText.chrgText.cpMax);
+    SendMessageW(hwnd, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&charFormat);
+    SendMessageW(hwnd, EM_SETSEL, 0, 0);
+}
+
+static void formatInfoBoldItalicText(HWND hwnd, const wchar_t* text) {
+
+    FINDTEXTEXW findText = { 0 };
+    CHARFORMAT2W charFormat = { 0 };
+
+    findText.chrg.cpMin = 0;
+    findText.chrg.cpMax = -1;
+    findText.lpstrText = (LPWSTR)text;
+
+    if (SendMessageW(hwnd, EM_FINDTEXTEXW, FR_DOWN, (LPARAM)&findText) == -1) {
+        return;
+    }
+
+    charFormat.cbSize = sizeof(CHARFORMAT2W);
+    charFormat.dwMask = CFM_BOLD | CFM_ITALIC;
+    charFormat.dwEffects = CFE_BOLD | CFE_ITALIC;
+
+    SendMessageW(hwnd, EM_SETSEL, findText.chrgText.cpMin, findText.chrgText.cpMax);
+    SendMessageW(hwnd, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&charFormat);
+    SendMessageW(hwnd, EM_SETSEL, 0, 0);
+}
+
 static void showInfoDialog(HWND hwnd) {
 
     static bool infoClassRegistered = false;
@@ -666,9 +723,10 @@ static void showInfoDialog(HWND hwnd) {
     RECT editTextRect = { 0 };
     HWND hInfo;
     HWND hControl;
+    HWND hInfoText;
     MSG msg;
-    int infoWidth = 620;
-    int infoHeight = 330;
+    int infoWidth;
+    int infoHeight;
     int dialogPadding = 20;
     int buttonWidth = 90;
     int buttonHeight = 30;
@@ -677,21 +735,60 @@ static void showInfoDialog(HWND hwnd) {
     int buttonY;
     int editHeight;
 
+    LoadLibraryW(L"Msftedit.dll");
+
     const wchar_t* infoText =
+        L"Password Options\r\n\r\n"
+        L"The \"Allow\" checkboxes control which character types are permitted in the random selection pool. "
+        L"For example, \"Allow Numbers\" means numbers are allowed to appear in the generated password. "
+        L"However, checking this option does not guarantee that the generated password will contain numbers. "
+        L"It simply allows numbers, but does not force numbers, to be part of the password.\r\n\r\n"
+        L"This preserves unrestricted random selection across the allowed character set instead of enforcing "
+        L"composition rules such as \"must contain at least one number\" or \"must contain at least one symbol.\" "
+        L"Enforced composition rules can reduce randomness and introduce predictable structure.\r\n\r\n"
+        L"\"Avoid Ambiguous Characters\" removes characters that are easy to confuse visually, such as 0, 1, "
+        L"I, O, i, l, o, and |. This can make passwords easier to read and type, especially when copied "
+        L"manually or read from a screen.\r\n\r\n"
+        L"The tradeoff is that removing characters reduces the size of the allowed character pool, which slightly "
+        L"reduces the total password space and changes the statistical distribution of generated passwords compared "
+        L"to using the full character set.\r\n\r\n"
+        L"\"Maximum Symbols\" limits how many symbols may appear in a password. This can make passwords more "
+        L"readable, but it intentionally restricts the output space.\r\n\r\n"
+        L"From a mathematical perspective, limiting symbols changes the statistical distribution of generated "
+        L"passwords because some otherwise valid character combinations are no longer possible.\r\n\r\n"
+        L"Technical Details\r\n\r\n"
         L"This password generator uses cryptographically secure random values provided by the operating "
         L"system via the Windows BCrypt API rather than traditional pseudo-random number generators such "
         L"as rand() or srand(time(NULL)).\r\n\r\n"
-        L"It also avoids statistical bias when converting random values into characters. If a random range "
-        L"does not divide evenly into the size of the allowed character set, some characters can become more "
-        L"likely than others. This application uses rejection sampling to ensure a uniform distribution across "
-        L"all allowed characters.\r\n\r\n"
-        L"When password rules require specific character classes such as uppercase letters, lowercase letters, "
-        L"numbers, or symbols, the generator first ensures those requirements are satisfied and then shuffles "
-        L"the generated characters using the Fisher-Yates algorithm so the required characters are not placed "
-        L"in predictable positions.\r\n\r\n"
-        L"The purpose of the final shuffle step is not to make the password \"more random,\" but rather to "
-        L"remove positional structure introduced by password policy requirements while maintaining a statistically "
-        L"uniform distribution.";
+        L"It avoids statistical bias when converting random values into characters. If a random range does not "
+        L"divide evenly into the size of the allowed character set, some characters can become more likely than "
+        L"others. This application uses rejection sampling to ensure a uniform distribution across all allowed "
+        L"characters.\r\n\r\n"
+        L"The generator also shuffles the generated password using the Fisher-Yates algorithm with unbiased random "
+        L"swap indices. In the standard mode, where each character is already selected independently from the same "
+        L"allowed pool, this shuffle is not needed for randomness. However, when optional constraints such as "
+        L"\"Max Symbols\" could introduce positional structure, the Fisher-Yates algorithm eliminates positional bias.";
+
+    if (GetWindowRect(hwnd, &ownerRect)) {
+
+        int ownerWidth = ownerRect.right - ownerRect.left;
+        int ownerHeight = ownerRect.bottom - ownerRect.top;
+
+        infoWidth = ownerWidth - 40;
+        infoHeight = ownerHeight - 40;
+
+        if (infoWidth < 500) {
+            infoWidth = 500;
+        }
+
+        if (infoHeight < 300) {
+            infoHeight = 300;
+        }
+    }
+    else {
+        infoWidth = 780;
+        infoHeight = 370;
+    }
 
     if (!infoClassRegistered) {
 
@@ -730,18 +827,27 @@ static void showInfoDialog(HWND hwnd) {
     buttonY = clientRect.bottom - buttonBottomPadding - buttonHeight;
     editHeight = buttonY - buttonGap - dialogPadding;
 
-    hControl = CreateWindowExW(WS_EX_CLIENTEDGE, L"edit", infoText,
+    hInfoText = CreateWindowExW(WS_EX_CLIENTEDGE, MSFTEDIT_CLASS, infoText,
         WS_VISIBLE | WS_CHILD | WS_VSCROLL | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL,
         dialogPadding, dialogPadding, clientRect.right - (dialogPadding * 2), editHeight,
         hInfo, NULL, NULL, NULL);
-    SendMessageW(hControl, WM_SETFONT, (WPARAM)hUiFont, TRUE);
-    SendMessageW(hControl, EM_SETMARGINS, EC_LEFTMARGIN | EC_RIGHTMARGIN, MAKELPARAM(10, 10));
-    GetClientRect(hControl, &editTextRect);
+
+    if (hInfoText == NULL) {
+        DestroyWindow(hInfo);
+        return;
+    }
+
+    SendMessageW(hInfoText, WM_SETFONT, (WPARAM)hUiFont, TRUE);
+    SendMessageW(hInfoText, EM_SETMARGINS, EC_LEFTMARGIN | EC_RIGHTMARGIN, MAKELPARAM(10, 10));
+    GetClientRect(hInfoText, &editTextRect);
     editTextRect.left += 10;
     editTextRect.right -= 14;
     editTextRect.top += 6;
     editTextRect.bottom -= 6;
-    SendMessageW(hControl, EM_SETRECT, 0, (LPARAM)&editTextRect);
+    SendMessageW(hInfoText, EM_SETRECT, 0, (LPARAM)&editTextRect);
+    formatInfoHeader(hInfoText, L"Password Options");
+    formatInfoHeader(hInfoText, L"Technical Details");
+    formatInfoBoldItalicText(hInfoText, L"allows");
 
     hControl = CreateWindowW(L"button", L"OK",
         WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
@@ -962,7 +1068,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
         switch (LOWORD(wParam)) {
 
-        // Toggle "Include Numbers"
+        // Toggle "Allow Numbers"
         case ID_INCNUMBERS:
 
             if (incNumbers) {
@@ -975,7 +1081,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             shouldGeneratePasswords = true;
             break;
 
-        // Toggle "Include Symbols"
+        // Toggle "Allow Symbols"
         case ID_INCSYMBOLS:
 
             if (incSymbols) {
@@ -992,7 +1098,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             shouldGeneratePasswords = true;
             break;
 
-        // Toggle "Include Lowercase Characters"
+        // Toggle "Allow Lowercase Characters"
         case ID_INCLOWERCHARS:
 
             if (incLowerChars) {
@@ -1005,7 +1111,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             shouldGeneratePasswords = true;
             break;
 
-        // Toggle "Include Uppercase Characters"
+        // Toggle "Allow Uppercase Characters"
         case ID_INCUPPERCHARS:
 
             if (incUpperChars) {
@@ -1044,30 +1150,45 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         case ID_GENERATEBUTTON:
 
             generatePasswordChoicesOrSetImpossible();
+            SetFocus(hwnd);
 
             break;
 
         // Copy the first generated password to the system clipboard
         case ID_COPYBUTTON:
+        {
+            LRESULT copyResult = copyPasswordText(hwnd, hPasswordBox1);
 
-            return copyPasswordText(hwnd, hPasswordBox1);
+            SetFocus(hwnd);
+            return copyResult;
+        }
 
         // Copy the second generated password to the system clipboard
         case ID_COPYBUTTON2:
+        {
+            LRESULT copyResult = copyPasswordText(hwnd, hPasswordBox2);
 
-            return copyPasswordText(hwnd, hPasswordBox2);
+            SetFocus(hwnd);
+            return copyResult;
+        }
 
         // Copy the third generated password to the system clipboard
         case ID_COPYBUTTON3:
+        {
+            LRESULT copyResult = copyPasswordText(hwnd, hPasswordBox3);
 
-            return copyPasswordText(hwnd, hPasswordBox3);
+            SetFocus(hwnd);
+            return copyResult;
+        }
 
         // Copy the fourth generated password to the system clipboard
         case ID_COPYBUTTON4:
+        {
+            LRESULT copyResult = copyPasswordText(hwnd, hPasswordBox4);
 
-            return copyPasswordText(hwnd, hPasswordBox4);
-
-            break;
+            SetFocus(hwnd);
+            return copyResult;
+        }
 
         // Display password generation information
         case IDM_HELP_INFO:

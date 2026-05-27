@@ -56,9 +56,9 @@ static void setPasswordFont(HWND hwnd) {
 static void centerPasswordText(HWND hwnd, UINT width, UINT height) {
 
     HDC hdc;
-    HFONT hOldFont;
-    TEXTMETRICW textMetric;
-    RECT textRect;
+    HFONT hOldFont = NULL;
+    TEXTMETRICW textMetric = { 0 };
+    RECT textRect = { 0 };
     int textY;
 
     if (hPasswordFont == NULL) {
@@ -72,7 +72,12 @@ static void centerPasswordText(HWND hwnd, UINT width, UINT height) {
     }
 
     hOldFont = (HFONT)SelectObject(hdc, hPasswordFont);
-    GetTextMetricsW(hdc, &textMetric);
+    if (!GetTextMetricsW(hdc, &textMetric)) {
+        SelectObject(hdc, hOldFont);
+        ReleaseDC(hwnd, hdc);
+        return;
+    }
+
     SelectObject(hdc, hOldFont);
     ReleaseDC(hwnd, hdc);
 
@@ -122,8 +127,8 @@ void createCheckBoxes(HWND hwnd) {
         hwnd, NULL, NULL, NULL);
     setUiFont(hControl);
 
-    // Include Numbers checkbox
-    hControl = CreateWindowW(L"button", L"Include Numbers",
+    // Allow Numbers checkbox
+    hControl = CreateWindowW(L"button", L"Allow Numbers",
         WS_VISIBLE | WS_CHILD | BS_CHECKBOX,
         checkBoxXpos, checkBoxYpos, checkBoxWidth, checkBoxHeight,
         hwnd, (HMENU)ID_INCNUMBERS, NULL, NULL);
@@ -131,9 +136,9 @@ void createCheckBoxes(HWND hwnd) {
 
     CheckDlgButton(hwnd, ID_INCNUMBERS, incNumbers ? BST_CHECKED : BST_UNCHECKED);
 
-    // Include Symbols checkbox
+    // Allow Symbols checkbox
     checkBoxYpos += checkBoxYdiff;
-    hControl = CreateWindowW(L"button", L"Include Symbols",
+    hControl = CreateWindowW(L"button", L"Allow Symbols",
         WS_VISIBLE | WS_CHILD | BS_CHECKBOX,
         checkBoxXpos, checkBoxYpos, checkBoxWidth, checkBoxHeight,
         hwnd, (HMENU)ID_INCSYMBOLS, NULL, NULL);
@@ -141,9 +146,9 @@ void createCheckBoxes(HWND hwnd) {
 
     CheckDlgButton(hwnd, ID_INCSYMBOLS, incSymbols ? BST_CHECKED : BST_UNCHECKED);
 
-    // Include Lowercase checkbox
+    // Allow Lowercase checkbox
     checkBoxYpos += checkBoxYdiff;
-    hControl = CreateWindowW(L"button", L"Include Lowercase Characters",
+    hControl = CreateWindowW(L"button", L"Allow Lowercase Characters",
         WS_VISIBLE | WS_CHILD | BS_CHECKBOX,
         checkBoxXpos, checkBoxYpos, checkBoxWidth, checkBoxHeight,
         hwnd, (HMENU)ID_INCLOWERCHARS, NULL, NULL);
@@ -151,9 +156,9 @@ void createCheckBoxes(HWND hwnd) {
 
     CheckDlgButton(hwnd, ID_INCLOWERCHARS, incLowerChars ? BST_CHECKED : BST_UNCHECKED);
 
-    // Include Uppercase checkbox
+    // Allow Uppercase checkbox
     checkBoxYpos += checkBoxYdiff;
-    hControl = CreateWindowW(L"button", L"Include Uppercase Characters",
+    hControl = CreateWindowW(L"button", L"Allow Uppercase Characters",
         WS_VISIBLE | WS_CHILD | BS_CHECKBOX,
         checkBoxXpos, checkBoxYpos, checkBoxWidth, checkBoxHeight,
         hwnd, (HMENU)ID_INCUPPERCHARS, NULL, NULL);
