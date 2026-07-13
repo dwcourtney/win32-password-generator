@@ -94,7 +94,7 @@ Change `Release` to `Debug`, or `x64` to `x86`, to build another configuration e
 
 ## License
 
-No license has been specified for this project. The bundled cJSON source retains its own MIT license notice.
+This project is licensed under the MIT License. The bundled cJSON source retains its own MIT license notice.
 
 ## Author
 
